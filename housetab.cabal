@@ -1,0 +1,23 @@
+Name: housetab
+Version: 0.1
+Synopsis: Project Synopsis Here
+Description: Project Description Here
+License: AllRightsReserved
+Author: Author
+Maintainer: maintainer@example.com
+Stability: Experimental
+Category: Web
+Build-type: Simple
+Cabal-version: >=1.2
+
+Flag development
+  Description: Whether to build the server in development (interpreted) mode
+  Default: False
+
+Executable housetab
+  hs-source-dirs: src
+  main-is: Main.hs
+
+  Build-depends: base                        >= 4       && < 5
+               , postgresql-simple           >= 0.4     && < 0.5
+               , rivet-migration             >= 0.1     && < 0.2

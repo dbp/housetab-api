@@ -33,5 +33,5 @@ migrate = do
     [ColumnSpec "id" "serial" Nothing (Just "PRIMARY KEY")
     ,ColumnSpec "person_id" "integer" Nothing (Just "NOT NULL REFERENCES persons(id)")
     ,ColumnSpec "start" "timestamptz" Nothing (Just "NOT NULL")
-    ,ColumnSpec "value" "integer" Nothing (Just "NOT NULL")
+    ,ColumnSpec "value" "decimal(10,2)" Nothing (Just "NOT NULL")
     ]

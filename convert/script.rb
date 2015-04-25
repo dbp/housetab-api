@@ -52,8 +52,6 @@ end
 
 
 m[:users].find().each do |account|
-  next
-
   res = pg.exec_params("SELECT id from accounts where email = $1", [account["accountEmail"]])
 
   if res.num_tuples.zero?
@@ -107,7 +105,6 @@ m[:users].find().each do |account|
 end
 
 m[:people].find().each do |person|
-  next
 
   account_id = get_account_id(m, pg, person["htid"])
 
@@ -115,8 +112,18 @@ m[:people].find().each do |person|
     if get_person_id(m, pg, person["_id"])
       # already exists
     else
-      pg.exec_params('INSERT INTO persons (account_id, name) values ($1,$2)',
-                     [account_id, person["name"]])
+      res = pg.exec_params('INSERT INTO persons (account_id, name) values ($1,$2) RETURNING id',
+                           [account_id, person["name"]])
+      if not res.num_tuples.zero? then
+        person_id =  res.first.first[1].to_i
+        person["shares"].each do |share|
+          date = DateTime.new(share["date"]["year"], share["date"]["month"], share["date"]["day"])
+          pg.exec_params('INSERT INTO shares (person_id, start, value) values ($1,$2,$3)',
+                           [person_id, date, share["value"]])
+        end
+      else
+        puts "Couldn't get id from person: #{person}"
+      end
     end
   else
     puts "No account for person: #{person['name']} #{person['htid']}"
@@ -146,11 +153,26 @@ m[:entries].find().each do |entry|
     begin
       who_id = get_person_id(m, pg, entry["who"])
 
-      date = DateTime.new(entry["when"]["year"], entry["when"]["month"], entry["when"]["day"])
+      if who_id
+        date = DateTime.new(entry["when"]["year"], entry["when"]["month"], entry["when"]["day"])
 
-      pg.exec_params('INSERT INTO entries (account_id, who, what, category, date, howmuch) values ($1,$2,$3,$4,$5,$6)',
+        res = pg.exec_params('INSERT INTO entries (account_id, who, what, category, date, howmuch) values ($1,$2,$3,$4,$5,$6) RETURNING id',
                      [account_id, who_id, entry["what"],
                       entry["category"], date, entry["howmuch"]])
+
+        if not res.num_tuples.zero? then
+          entry_id =  res.first.first[1].to_i
+          whopays = entry["whopays"].map {|wp| get_person_id(m, pg, wp) }
+          whopays.each do |person_id|
+          pg.exec_params('INSERT INTO entries_whopays (entry_id, person_id) values ($1,$2)',
+                         [entry_id, person_id])
+          end
+        else
+          puts "Couldn't get ID from entry: #{entry}"
+        end
+      else
+        puts "Couldn't find who person: #{entry}"
+      end
     rescue ArgumentError
       puts "Couldn't figure out date: #{entry}"
     end

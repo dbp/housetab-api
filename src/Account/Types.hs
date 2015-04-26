@@ -1,31 +1,36 @@
-{-# LANGUAGE Arrows #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE Arrows                #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE StandaloneDeriving, DeriveGeneric #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE StandaloneDeriving    #-}
+{-# LANGUAGE TemplateHaskell       #-}
 
 module Account.Types where
 
-import Prelude hiding (Sum)
-import GHC.Generics
+import           GHC.Generics
+import           Prelude                    hiding (Sum)
 
-import Data.Text (Text)
-import qualified Data.Text.Encoding as TE
-import Data.ByteString (ByteString)
-import Data.Aeson (FromJSON(..), ToJSON(..))
-import qualified Data.ByteString.Base64 as B64
-
-import Opaleye
-import           Data.Profunctor.Product (p2, p3)
+import           Control.Arrow              (returnA)
+import qualified Crypto.Hash.SHA512         as SHA512
+import           Data.Aeson                 (FromJSON (..), ToJSON (..))
+import           Data.ByteString            (ByteString)
+import qualified Data.ByteString            as B
+import qualified Data.ByteString.Base64     as B64
+import           Data.ByteString.Internal   (c2w)
+import           Data.Profunctor.Product    (p2, p3)
 import           Data.Profunctor.Product.TH (makeAdaptorAndInstance)
-import Control.Arrow (returnA)
+import           Data.Text                  (Text)
+import qualified Data.Text.Encoding         as TE
+import           Opaleye
+import           System.Random              (randomRIO)
 
-data Account' a b c d e = Account { accountId :: a
-                                  , accountName :: b
-                                  , accountEmail :: c
+data Account' a b c d e = Account { accountId       :: a
+                                  , accountName     :: b
+                                  , accountEmail    :: c
                                   , accountPassword :: d
-                                  , accountSalt :: e
+                                  , accountSalt     :: e
                                   }
 type Account = Account' Int Text Text ByteString ByteString
 type NewAccount = Account' () Text Text Text ()
@@ -56,6 +61,26 @@ instance ToJSON NewAccount
 instance FromJSON NewAccount
 
 $(makeAdaptorAndInstance "pAccount" ''Account')
+
+genSalt :: IO ByteString
+genSalt = do chars <- sequence (take 64 (repeat (randomRIO ('a','z'))))
+             return $ B.pack (map c2w chars)
+
+hashPassword :: Text -> ByteString -> ByteString
+hashPassword cleartext salt =
+  let a = B.append salt (TE.encodeUtf8 cleartext)
+  in (iterate SHA512.hash a) !! 512
+
+conv :: NewAccount -> IO NewAccountColumn
+conv (Account {..}) = do
+  salt <- genSalt
+  let hash = hashPassword accountPassword salt
+  return $ Account { accountId = Nothing
+                   , accountName = pgStrictText accountName
+                   , accountEmail = pgStrictText accountEmail
+                   , accountPassword = pgStrictByteString hash
+                   , accountSalt = pgStrictByteString salt
+                   }
 
 accountTable :: Table NewAccountColumn AccountColumn
 accountTable = Table "accounts" (pAccount Account { accountId = optional "id"

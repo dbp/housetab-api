@@ -10,10 +10,6 @@ Category: Web
 Build-type: Simple
 Cabal-version: >=1.2
 
-Flag development
-  Description: Whether to build the server in development (interpreted) mode
-  Default: False
-
 Executable housetab
   hs-source-dirs: src
   main-is: Main.hs
@@ -21,16 +17,19 @@ Executable housetab
   Build-depends: base                        >= 4       && < 5
                -- stable core libraries
                , text
+               , bytestring
+               , base64-bytestring
                , aeson
                , transformers
+               , cryptohash
 
                -- applcation specific, perhaps unstable, libraries.
                , postgresql-simple           >= 0.4     && < 0.5
                , rivet-migration             >= 0.1     && < 0.2
-
                , opaleye                     >= 0.3.1.2 && < 0.4
                 -- opaleye deps
                , product-profunctors
+
 
                , servant                     >= 0.2
                , servant-server              >= 0.2

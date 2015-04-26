@@ -15,5 +15,9 @@ accountApi = Proxy
 
 main :: IO ()
 main = do
-  conn <- connectPostgreSQL "host=localhost user=housetab_user dbname=housetab_devel password=111"
-  run 8080 (serve accountApi $ server conn)
+  conn <- connectPostgreSQL "host=localhost \
+                            \user=housetab_user \
+                            \dbname=housetab_devel \
+                            \password=111"
+  putStrLn "Listening on port 8000..."
+  run 8000 (serve accountApi $ server conn)

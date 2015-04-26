@@ -3,3 +3,6 @@ cabal.sandbox.config
 .shake/
 dist/
 deps/
+convert/dist
+convert/.cabal-sandbox
+convert/cabal.sandbox.config

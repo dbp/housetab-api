@@ -9,6 +9,8 @@ migrate = do
     [ColumnSpec "id" "serial" Nothing (Just "PRIMARY KEY")
     ,ColumnSpec "name" "text" Nothing (Just "NOT NULL")
     ,ColumnSpec "email" "text" Nothing (Just "NOT NULL UNIQUE")
+    ,ColumnSpec "password" "bytea" Nothing (Just "NOT NULL")
+    ,ColumnSpec "salt" "bytea" Nothing (Just "NOT NULL")
     ]
   createTable "persons"
     [ColumnSpec "id" "serial" Nothing (Just "PRIMARY KEY")

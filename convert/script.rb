@@ -55,8 +55,21 @@ m[:users].find().each do |account|
   res = pg.exec_params("SELECT id from accounts where email = $1", [account["accountEmail"]])
 
   if res.num_tuples.zero?
-    pg.exec_params('INSERT INTO accounts (name, email) values ($1,$2)',
-                   [account["accountName"], account["accountEmail"]])
+
+    # NOTE(dbp 2015-04-26): So this is hilarious. I'm not sure who is to blame, but
+    # the haskell application for housetab with mongo was able to store raw binary data
+    # in a string type. I don't see a way to get that out via the ruby client, as it
+    # seems to be interpreted as a UTF-8 string, which it's not. But I can still do some
+    # juggling in haskell to get this out, so at this stage, we'll shell out to the getpass
+    # project to get the bytes of the password.
+    puts "Shelling out to get password for #{account['accountName']}..."
+    pass = `cabal run -v0 "#{account['accountName']}"`
+    pass = pass.gsub!(/[\[\]]/,'').split(/\s*,\s*/).map(&:to_i).pack("C*")
+
+    pg.exec_params('INSERT INTO accounts (name, email, password, salt) values ($1,$2,$3::bytea,$4)',
+                   [account["accountName"], account["accountEmail"],
+                    pg.escape_bytea(pass),
+                    pg.escape_bytea(account["salt"])])
   else
     # already exists
   end

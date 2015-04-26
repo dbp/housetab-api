@@ -12,7 +12,7 @@ import qualified Data.Text.Encoding     as TE
 import qualified Database.Redis         as R
 import           GHC.Generics
 
-import           Account.Types
+import           Account.Types          (genSalt)
 
 data Authentication = Authed Text
                     | NotAuthed deriving Generic
@@ -38,6 +38,12 @@ touch r token = do r <- liftIO $ R.runRedis r (R.expire (key token) sessionSecon
                    case r of
                      Left _ -> return False
                      Right _ -> return True
+
+delete :: R.Connection -> Text -> IO Bool
+delete r token = do r <- liftIO $ R.runRedis r (R.del [key token])
+                    case r of
+                      Left _ -> return False
+                      Right _ -> return True
 
 check :: R.Connection -> Text -> IO Bool
 check r token = do ex <- liftIO $ R.runRedis r (R.exists (key token))

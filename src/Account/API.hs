@@ -35,13 +35,16 @@ import           Servant
 
 type AccountApi = "accounts" :> ReqBody NewAccount :> Post Account
              :<|> "accounts" :> "session" :> "new"
-                             :> Capture "name" Text
+                             :> QueryParam "name" Text
                              :> QueryParam "password" Text
                              :> Get Account.Session.Authentication
              :<|> "accounts" :> "session" :> "check"
                              :> QueryParam "token" Text
                              :> Get Bool
              :<|> "accounts" :> "session" :> "touch"
+                             :> QueryParam "token" Text
+                             :> Get Bool
+             :<|> "accounts" :> "session" :> "delete"
                              :> QueryParam "token" Text
                              :> Get Bool
              :<|> "accounts" :> Capture "name" Text :> Get Account
@@ -53,9 +56,11 @@ server pg r = postAccount pg
              :<|> authenticate pg r
              :<|> checkSession r
              :<|> touchSession r
+             :<|> deleteSession r
              :<|> getAccount pg
              :<|> getAccounts pg
   where touchSession r (Just token) = liftIO (Account.Session.touch r token)
+        deleteSession r (Just token) = liftIO (Account.Session.delete r token)
         checkSession r (Just token) = liftIO (Account.Session.check r token)
         one :: PG.Connection -> Text -> IO Account
         one pg name = liftM head $ runQuery pg (getAccountQuery name)
@@ -63,7 +68,7 @@ server pg r = postAccount pg
           do account' <- liftIO $ conv account
              [account''] <- liftIO $ runInsertReturning pg accountTable account' id
              return account''
-        authenticate pg r name (Just password) =
+        authenticate pg r (Just name) (Just password) =
           do account <- liftIO $ one pg name
              let authenticated =
                    accountPassword account == hashPassword password (accountSalt account)

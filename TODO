@@ -1,0 +1,2 @@
+* Use actual HTTP error codes for endpoints that encounter problems (like redis returning errors).
+* Don't use partial functions.

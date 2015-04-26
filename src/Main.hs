@@ -11,8 +11,9 @@ import           Database.PostgreSQL.Simple (connectPostgreSQL)
 import           Database.Redis             (connect, defaultConnectInfo)
 import           Network.Wai.Handler.Warp   (run)
 import           Servant
+import           Servant.Utils.StaticFiles
 
-type Api = Account.API.Api :<|> Entry.API.Api
+type Api = Account.API.Api :<|> Entry.API.Api :<|> Raw
 
 api :: Proxy Api
 api = Proxy
@@ -26,4 +27,6 @@ main = do
   redis <- connect defaultConnectInfo
   putStrLn "Listening on port 8000..."
   run 8000 (serve api $ (Account.API.server pg redis)
-                           :<|> (Entry.API.server pg redis))
+                   :<|> (Entry.API.server pg redis)
+                   :<|> serveDirectory "static"
+                   )

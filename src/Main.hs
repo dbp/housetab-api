@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators     #-}
 
@@ -13,7 +14,9 @@ import           Network.Wai.Handler.Warp   (run)
 import           Servant
 import           Servant.Utils.StaticFiles
 
-type Api = Account.API.Api :<|> Entry.API.Api :<|> Raw
+type Api = "api" :> Account.API.Api
+      :<|> "api" :> Entry.API.Api
+      :<|> Raw
 
 api :: Proxy Api
 api = Proxy

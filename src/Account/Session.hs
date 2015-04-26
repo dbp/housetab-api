@@ -50,3 +50,9 @@ check r token = do ex <- liftIO $ R.runRedis r (R.exists (key token))
                    case ex of
                      Right True -> return True
                      _ -> return False
+
+get :: R.Connection -> Text -> IO (Maybe Int)
+get r token = do r <- liftIO $ R.runRedis r (R.get (key token))
+                 case r of
+                   Right (Just i) -> return (Just $ read . T.unpack . TE.decodeUtf8 $ i)
+                   _ -> return Nothing

@@ -24,6 +24,7 @@ Executable housetab
                , cryptohash
                , random
                , either
+               , time >= 1.5
 
                -- applcation specific, perhaps unstable, libraries.
                , postgresql-simple           >= 0.4     && < 0.5

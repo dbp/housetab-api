@@ -33,25 +33,25 @@ import           Account.Types
 import           Servant
 
 
-type AccountApi = "accounts" :> ReqBody NewAccount :> Post Account
-             :<|> "accounts" :> "session" :> "new"
-                             :> QueryParam "name" Text
-                             :> QueryParam "password" Text
-                             :> Get Account.Session.Authentication
-             :<|> "accounts" :> "session" :> "check"
-                             :> QueryParam "token" Text
-                             :> Get Bool
-             :<|> "accounts" :> "session" :> "touch"
-                             :> QueryParam "token" Text
-                             :> Get Bool
-             :<|> "accounts" :> "session" :> "delete"
-                             :> QueryParam "token" Text
-                             :> Get Bool
-             :<|> "accounts" :> Capture "name" Text :> Get Account
-             :<|> "accounts" :> Get [Account]
+type Api = "accounts" :> ReqBody NewAccount :> Post Account
+      :<|> "accounts" :> "session" :> "new"
+                      :> QueryParam "name" Text
+                      :> QueryParam "password" Text
+                      :> Get Account.Session.Authentication
+      :<|> "accounts" :> "session" :> "check"
+                      :> QueryParam "token" Text
+                      :> Get Bool
+      :<|> "accounts" :> "session" :> "touch"
+                      :> QueryParam "token" Text
+                      :> Get Bool
+      :<|> "accounts" :> "session" :> "delete"
+                      :> QueryParam "token" Text
+                      :> Get Bool
+      :<|> "accounts" :> Capture "name" Text :> Get Account
+      :<|> "accounts" :> Get [Account]
 
 
-server :: PG.Connection -> R.Connection -> Server AccountApi
+server :: PG.Connection -> R.Connection -> Server Api
 server pg r = postAccount pg
              :<|> authenticate pg r
              :<|> checkSession r

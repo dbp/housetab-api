@@ -24,7 +24,7 @@ migrate = do
     ,ColumnSpec "what" "text" Nothing (Just "NOT NULL")
     ,ColumnSpec "category" "text" Nothing (Just "NOT NULL")
     ,ColumnSpec "date" "timestamptz" Nothing (Just "NOT NULL")
-    ,ColumnSpec "howmuch" "decimal(12,2)" Nothing (Just "NOT NULL")
+    ,ColumnSpec "howmuch" "float8" Nothing (Just "NOT NULL")
     ]
   createTable "entries_whopays"
     [ColumnSpec "id" "serial" Nothing (Just "PRIMARY KEY")

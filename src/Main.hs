@@ -1,18 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module Main where
 
-import Account.Types
-import Account.API
+import qualified Account.API
+import qualified Entry.API
 
-import Database.PostgreSQL.Simple (connectPostgreSQL)
-import Servant (serve)
-import Network.Wai.Handler.Warp (run)
-import Data.Proxy (Proxy(..))
-import Database.Redis (connect, defaultConnectInfo)
+import           Data.Proxy                 (Proxy (..))
+import           Database.PostgreSQL.Simple (connectPostgreSQL)
+import           Database.Redis             (connect, defaultConnectInfo)
+import           Network.Wai.Handler.Warp   (run)
+import           Servant
 
-accountApi :: Proxy AccountApi
-accountApi = Proxy
+type Api = Account.API.Api :<|> Entry.API.Api
+
+api :: Proxy Api
+api = Proxy
 
 main :: IO ()
 main = do
@@ -22,4 +25,5 @@ main = do
                           \password=111"
   redis <- connect defaultConnectInfo
   putStrLn "Listening on port 8000..."
-  run 8000 (serve accountApi $ server pg redis)
+  run 8000 (serve api $ (Account.API.server pg redis)
+                           :<|> (Entry.API.server pg redis))

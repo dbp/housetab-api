@@ -22,6 +22,7 @@ Executable housetab
                , aeson
                , transformers
                , cryptohash
+               , random
 
                -- applcation specific, perhaps unstable, libraries.
                , postgresql-simple           >= 0.4     && < 0.5

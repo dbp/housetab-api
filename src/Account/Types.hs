@@ -28,8 +28,19 @@ data Account' a b c d e = Account { accountId :: a
                                   , accountSalt :: e
                                   }
 type Account = Account' Int Text Text ByteString ByteString
-type NewAccountColumn = Account' (Maybe (Column PGInt4)) (Column PGText) (Column PGText) (Column PGBytea) (Column PGBytea)
-type AccountColumn = Account' (Column PGInt4) (Column PGText) (Column PGText) (Column PGBytea) (Column PGBytea)
+type NewAccount = Account' () Text Text Text ()
+
+type AccountColumn = Account' (Column PGInt4)
+                              (Column PGText)
+                              (Column PGText)
+                              (Column PGBytea)
+                              (Column PGBytea)
+
+type NewAccountColumn = Account' (Maybe (Column PGInt4))
+                                 (Column PGText)
+                                 (Column PGText)
+                                 (Column PGBytea)
+                                 (Column PGBytea)
 
 instance ToJSON ByteString where
     toJSON bs = toJSON (TE.decodeUtf8 $ B64.encode bs)
@@ -41,6 +52,8 @@ instance FromJSON ByteString where
 deriving instance Generic (Account' a b c d e)
 instance ToJSON Account
 instance FromJSON Account
+instance ToJSON NewAccount
+instance FromJSON NewAccount
 
 $(makeAdaptorAndInstance "pAccount" ''Account')
 

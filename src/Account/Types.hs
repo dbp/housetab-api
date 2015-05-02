@@ -26,26 +26,32 @@ import qualified Data.Text.Encoding         as TE
 import           Opaleye
 import           System.Random              (randomRIO)
 
-data Account' a b c d e = Account { accountId       :: a
-                                  , accountName     :: b
-                                  , accountEmail    :: c
-                                  , accountPassword :: d
-                                  , accountSalt     :: e
-                                  }
-type Account = Account' Int Text Text ByteString ByteString
-type NewAccount = Account' () Text Text Text ()
+data Account' a b c d e f g = Account { accountId             :: a
+                                      , accountName           :: b
+                                      , accountEmail          :: c
+                                      , accountPassword       :: d
+                                      , accountSalt           :: e
+                                      , accountTutorialActive :: f
+                                      , accountRecordHistory  :: g
+                                      }
+type Account = Account' Int Text Text ByteString ByteString Bool Bool
+type NewAccount = Account' () Text Text Text () Bool Bool
 
 type AccountColumn = Account' (Column PGInt4)
                               (Column PGText)
                               (Column PGText)
                               (Column PGBytea)
                               (Column PGBytea)
+                              (Column PGBool)
+                              (Column PGBool)
 
 type NewAccountColumn = Account' (Maybe (Column PGInt4))
                                  (Column PGText)
                                  (Column PGText)
                                  (Column PGBytea)
                                  (Column PGBytea)
+                                 (Column PGBool)
+                                 (Column PGBool)
 
 instance ToJSON ByteString where
     toJSON bs = toJSON (TE.decodeUtf8 $ B64.encode bs)
@@ -54,7 +60,7 @@ instance FromJSON ByteString where
     parseJSON o = parseJSON o >>= either fail return . B64.decode . TE.encodeUtf8
 
 
-deriving instance Generic (Account' a b c d e)
+deriving instance Generic (Account' a b c d e f g)
 instance ToJSON Account
 instance FromJSON Account
 instance ToJSON NewAccount
@@ -80,15 +86,20 @@ conv (Account {..}) = do
                    , accountEmail = pgStrictText accountEmail
                    , accountPassword = pgStrictByteString hash
                    , accountSalt = pgStrictByteString salt
+                   , accountTutorialActive = pgBool accountTutorialActive
+                   , accountRecordHistory = pgBool accountRecordHistory
                    }
 
 accountTable :: Table NewAccountColumn AccountColumn
-accountTable = Table "accounts" (pAccount Account { accountId = optional "id"
-                                                  , accountName = required "name"
-                                                  , accountEmail = required "email"
-                                                  , accountPassword = required "password"
-                                                  , accountSalt = required "salt"
-                                                  })
+accountTable =
+  Table "accounts" (pAccount Account { accountId = optional "id"
+                                     , accountName = required "name"
+                                     , accountEmail = required "email"
+                                     , accountPassword = required "password"
+                                     , accountSalt = required "salt"
+                                     , accountTutorialActive = required "tutorial_active"
+                                     , accountRecordHistory = required "record_history"
+                                     })
 
 accountQuery :: Query AccountColumn
 accountQuery = queryTable accountTable

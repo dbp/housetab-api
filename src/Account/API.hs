@@ -15,6 +15,7 @@ import           Control.Monad.Trans.Either
 import           Data.Aeson                      (ToJSON)
 import           Data.ByteString                 (ByteString)
 import qualified Data.ByteString                 as B
+import           Data.Maybe                      (listToMaybe)
 import           Data.Profunctor.Product.Default (def)
 import           Data.Text                       (Text)
 import qualified Data.Text                       as T
@@ -47,8 +48,6 @@ type Api = "accounts" :> ReqBody NewAccount :> Post Account
       :<|> "accounts" :> "session" :> "delete"
                       :> QueryParam "token" Text
                       :> Get Bool
-      :<|> "accounts" :> Capture "name" Text :> Get Account
-      :<|> "accounts" :> Get [Account]
 
 
 server :: PG.Connection -> R.Connection -> Server Api
@@ -57,24 +56,23 @@ server pg r = postAccount pg
              :<|> checkSession r
              :<|> touchSession r
              :<|> deleteSession r
-             :<|> getAccount pg
-             :<|> getAccounts pg
   where touchSession r (Just token) = liftIO (Account.Session.touch r token)
         deleteSession r (Just token) = liftIO (Account.Session.delete r token)
         checkSession r (Just token) = liftIO (Account.Session.check r token)
-        one :: PG.Connection -> Text -> IO Account
-        one pg name = liftM head $ runQuery pg (getAccountQuery name)
+        one :: PG.Connection -> Text -> IO (Maybe Account)
+        one pg name = liftM listToMaybe $ runQuery pg (getAccountQuery name)
         postAccount pg account =
           do account' <- liftIO $ conv account
              [account''] <- liftIO $ runInsertReturning pg accountTable account' id
              return account''
         authenticate pg r (Just name) (Just password) =
-          do account <- liftIO $ one pg name
-             let authenticated =
-                   accountPassword account == hashPassword password (accountSalt account)
-             if authenticated
-                then do token <- liftIO (Account.Session.generate r (accountId account))
-                        return $ Account.Session.Authed token
-                else return Account.Session.NotAuthed
-        getAccount pg name = liftIO $ one pg name
-        getAccounts pg = liftIO $ runQuery pg accountQuery
+          do maccount <- liftIO $ one pg name
+             case maccount of
+               Nothing -> return Account.Session.NotAuthed
+               Just account -> do
+                 let authenticated =
+                       accountPassword account == hashPassword password (accountSalt account)
+                 if authenticated
+                    then do token <- liftIO (Account.Session.generate r (accountId account))
+                            return $ Account.Session.Authed token
+                    else return Account.Session.NotAuthed

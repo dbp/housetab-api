@@ -13,8 +13,8 @@ def get_account_id(htid)
   account = M[:users].find(:_id => id).first
 
   if not account.nil?
-    res = PG.exec_params("SELECT id from accounts where email = $1",
-                         [account["accountEmail"]])
+    res = PG.exec_params("SELECT id from accounts where name = $1",
+                         [account["accountName"]])
     if not res.num_tuples.zero? then
       res.first.first[1].to_i
     else

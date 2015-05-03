@@ -1,12 +1,3 @@
-{-# LANGUAGE Arrows                #-}
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE TemplateHaskell       #-}
-
 module Entry.Types where
 
 import           GHC.Generics
@@ -70,6 +61,7 @@ instance FromJSON NewEntry
 
 $(makeAdaptorAndInstance "pEntry" ''Entry')
 
+-- NOTE(dbp 2015-05-02): This function is boilerplate, hopefully removable at some point.
 conv :: NewEntry -> IO NewEntryColumn
 conv (Entry {..}) = do
   return $ Entry { entryId = Nothing
@@ -92,7 +84,7 @@ entryTable = Table "entries" (pEntry Entry { entryId = optional "id"
                                            })
 
 entryQuery :: Query EntryColumn
-entryQuery = queryTable entryTable
+entryQuery = orderBy (desc entryDate) $ queryTable entryTable
 
 getAccountEntries :: Int -> Query EntryColumn
 getAccountEntries account_id = proc () ->

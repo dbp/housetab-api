@@ -1,11 +1,8 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators     #-}
-
 module Main where
 
 import qualified Account.API
 import qualified Entry.API
+import qualified Person.API
 
 import           Data.Proxy                 (Proxy (..))
 import           Database.PostgreSQL.Simple (connectPostgreSQL)
@@ -16,6 +13,7 @@ import           Servant.Utils.StaticFiles
 
 type Api = "api" :> Account.API.Api
       :<|> "api" :> Entry.API.Api
+      :<|> "api" :> Person.API.Api
       :<|> Raw
 
 api :: Proxy Api
@@ -31,5 +29,6 @@ main = do
   putStrLn "Listening on port 8000..."
   run 8000 (serve api $ (Account.API.server pg redis)
                    :<|> (Entry.API.server pg redis)
+                   :<|> (Person.API.server pg redis)
                    :<|> serveDirectory "static"
                    )

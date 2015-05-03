@@ -1,4 +1,4 @@
-module Entry.API where
+module Person.API where
 
 import           Control.Monad                   (liftM)
 import           Control.Monad.IO.Class          (MonadIO, liftIO)
@@ -20,16 +20,16 @@ import qualified Database.PostgreSQL.Simple      as PG
 import qualified Database.Redis                  as R
 
 import qualified Account.Session
-import           Entry.Types
+import           Person.Types
 import           Servant
 
 
-type Api = "entries" :> QueryParam "token" Text :> Get [Entry]
+type Api = "persons" :> QueryParam "token" Text :> Get [Person]
 
 server :: PG.Connection -> R.Connection -> Server Api
-server pg r = getEntries pg r
-  where getEntries pg r (Just token) =
+server pg r = getPersons pg r
+  where getPersons pg r (Just token) =
           do maid <- liftIO $ Account.Session.get r token
              case maid of
                Nothing -> return []
-               Just account_id -> liftIO $ runQuery pg (getAccountEntries account_id)
+               Just account_id -> liftIO $ runQuery pg (getAccountPersons account_id)

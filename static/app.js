@@ -1,3 +1,11 @@
+function logout() {
+  delete localStorage["housetab_token"];
+  delete localStorage["housetab_account"];
+  $.get("/api/accounts/session/delete?token=" + token);
+  render();
+}
+
+
 function render() {
 
   if (typeof localStorage == 'undefined') {
@@ -11,13 +19,16 @@ function render() {
     var token = localStorage["housetab_token"];
     var account = localStorage["housetab_account"];
 
-    var logoutDom = $("<a href='#'>").text("Logout").on("click", function () {
-      delete localStorage["housetab_token"];
-      $("#site").text("Logging out...");
-      $.get("/api/accounts/session/delete?token=" + token, function () {
-        render();
-      });
+    $.get("/api/accounts/session/check", function (r) {
+      console.log(r);
+      if (r) {
+        $.get("/api/accounts/session/touch");
+      } else {
+        logout();
+      }
     });
+
+    var logoutDom = $("<a href='#'>").text("Logout").on("click", logout);
 
     var logoutLiDom = $("<li class='generated'>").append(logoutDom);
 
@@ -47,6 +58,17 @@ function render() {
         tableBodyDom.append(trDom);
       });
       $("#main").html(holderDom);
+    });
+
+    $.get("/api/persons?token=" + token, function(r) {
+
+      r.forEach(function (p) {
+        var personDom = $("<div class='generated col-xs-6 col-sm-3'>");
+        personDom.append($("<h4>").text(p.personName));
+        personDom.append($("<span class='text-muted'>").text("50"));
+        $(".person-holder").append(personDom);
+      });
+
     });
 
   } else {

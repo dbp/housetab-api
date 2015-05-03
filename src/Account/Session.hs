@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE OverloadedStrings #-}
 module Account.Session where
 
 import           Control.Monad.IO.Class (liftIO)

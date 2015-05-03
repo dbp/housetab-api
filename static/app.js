@@ -5,10 +5,13 @@ function render() {
     throw new Error("No localStorage.");
   }
 
-  if (localStorage["housetab_token"]) {
-    var token = localStorage["housetab_token"];
+  $("#navbar").find(".generated").remove();
 
-    var logoutDom = $("<button>").text("Logout").on("click", function () {
+  if (localStorage["housetab_token"] && localStorage["housetab_account"]) {
+    var token = localStorage["housetab_token"];
+    var account = localStorage["housetab_account"];
+
+    var logoutDom = $("<a href='#'>").text("Logout").on("click", function () {
       delete localStorage["housetab_token"];
       $("#site").text("Logging out...");
       $.get("/api/accounts/session/delete?token=" + token, function () {
@@ -16,28 +19,40 @@ function render() {
       });
     });
 
-    $("#nav").html(logoutDom);
+    var logoutLiDom = $("<li class='generated'>").append(logoutDom);
 
+    $(".navbar-nav").append(logoutLiDom);
 
-    $("#site").text("Loading...");
+    $(".page-header").text(account);
+
+    $("#main").text("Loading...");
 
     $.get("/api/entries?token=" + token, function(r) {
-      var tableDom = $("<table>");
+
+      var holderDom = $("<div class='table-responsive'>");
+
+      var tableDom = $("<table class='table table-striped'>");
+      holderDom.append(tableDom);
+      tableDom.append($("<thead><tr><th>Category</th><th>What</th><th>How Much</th><th>Date</th></tr></thead>"));
+
+      var tableBodyDom = $("<tbody>");
+      tableDom.append(tableBodyDom);
+
       r.forEach(function (e) {
         var trDom = $("<tr>");
         trDom.append($("<td>").text(e.entryCategory));
         trDom.append($("<td>").text(e.entryWhat));
-        trDom.append($("<td>").text("$" + e.entryHowMuch % 100 + "." + e.entryHowMuch / 100));
+        trDom.append($("<td>").text("$" + e.entryHowMuch));
         trDom.append($("<td>").text(e.entryDate));
-        tableDom.append(trDom);
+        tableBodyDom.append(trDom);
       });
-      $("#site").html(tableDom);
+      $("#main").html(holderDom);
     });
 
   } else {
-
-    var formDom = $("<form>").on("submit", function () {
+    var formDom = $("<form class='generated navbar-form navbar-right'>").on("submit", function () {
       var form = $(this);
+      form.find('.error').remove();
 
       var name = form.find("input[name='username']").val();
       var pass = form.find("input[name='password']").val();
@@ -50,22 +65,23 @@ function render() {
 
         if (r.tag === 'Authed') {
           localStorage["housetab_token"] = r.contents;
+          localStorage["housetab_account"] = name;
           render();
         } else {
-          form.prepend($("<div style='background-color: #FFC0CB'>")
-                      .text("Username or password incorrect"));
+          form.prepend($("<div class='error' style='background-color: #FFC0CB'>")
+                       .text("Username or password incorrect"));
         }
       });
 
       return false;
     });
 
-    formDom.append($("<label for='username'>Username: <input name='username'/></label>"));
-    formDom.append($("<label for='password'>Password: <input name='password' type='password'/></label>"));
-    formDom.append($("<input type='submit' value='Login'/>"));
+    formDom.append($("<input class='form-control' name='username' placeholder='Username...'/>"));
+    formDom.append($("<input class='form-control' name='password' type='password' placeholder='Password...'/>"));
+    formDom.append($("<input class='form-control' type='submit' value='Login'/>"));
 
-    $("#nav").html(formDom);
-    $("#site").text("");
+    $("#navbar").append(formDom);
+    $("#main").text();
   }
 
 }

@@ -1,5 +1,6 @@
 module Account.API where
 
+import Control.Applicative
 import           Control.Monad                   (liftM)
 import           Control.Monad.IO.Class          (MonadIO, liftIO)
 import           Control.Monad.Trans.Either
@@ -23,7 +24,11 @@ import qualified Database.Redis                  as R
 import qualified Account.Session
 import           Account.Types
 import           Servant
+import Servant.Docs
 
+
+newtype Success = Success Bool deriving Generic
+instance ToJSON Success
 
 type Api = "accounts" :> ReqBody NewAccount :> Post Account
       :<|> "accounts" :> "session" :> "new"
@@ -32,14 +37,50 @@ type Api = "accounts" :> ReqBody NewAccount :> Post Account
                       :> Get Account.Session.Authentication
       :<|> "accounts" :> "session" :> "check"
                       :> QueryParam "token" Text
-                      :> Get Bool
+                      :> Get Success
       :<|> "accounts" :> "session" :> "touch"
                       :> QueryParam "token" Text
-                      :> Get Bool
+                      :> Get Success
       :<|> "accounts" :> "session" :> "delete"
                       :> QueryParam "token" Text
-                      :> Get Bool
+                      :> Get Success
 
+
+instance ToParam (QueryParam "name" Text) where
+  toParam _ =
+    DocQueryParam "name"
+                  []
+                  "The name of an account."
+                  Normal
+
+instance ToParam (QueryParam "password" Text) where
+  toParam _ =
+    DocQueryParam "password"
+                  []
+                  "The password of an account."
+                  Normal
+
+instance ToParam (QueryParam "token" Text) where
+  toParam _ =
+    DocQueryParam "token"
+                  []
+                  "A session token retrieved from the API, used for authenticating requests."
+                  Normal
+
+instance ToSample Success where
+  toSamples = [("Operation succeeded.", Success True)
+              ,("Operation failed.", Success False)]
+
+instance ToSample Account where
+  toSample = Just (Account 1 "ghouse" "emma@housetab.org" "hteo02h2th" "1111" False True)
+
+instance ToSample NewAccount where
+  toSample = Just (Account () "ghouse" "emma@housetab.org" "password" () False True)
+
+instance ToSample Account.Session.Authentication where
+  toSamples = [("Successfully authenticated, contains the session token."
+               ,Account.Session.Authed "abcde")
+              ,("Failed to authenticate.", Account.Session.NotAuthed)]
 
 server :: PG.Connection -> R.Connection -> Server Api
 server pg r = postAccount pg
@@ -47,9 +88,9 @@ server pg r = postAccount pg
              :<|> checkSession r
              :<|> touchSession r
              :<|> deleteSession r
-  where touchSession r (Just token) = liftIO (Account.Session.touch r token)
-        deleteSession r (Just token) = liftIO (Account.Session.delete r token)
-        checkSession r (Just token) = liftIO (Account.Session.check r token)
+  where touchSession r (Just token) = liftIO (Success <$> Account.Session.touch r token)
+        deleteSession r (Just token) = liftIO (Success <$> Account.Session.delete r token)
+        checkSession r (Just token) = liftIO (Success <$> Account.Session.check r token)
         one :: PG.Connection -> Text -> IO (Maybe Account)
         one pg name = liftM listToMaybe $ runQuery pg (getAccountQuery name)
         postAccount pg account =

@@ -79,10 +79,6 @@ var NavBar = {
 
 
 
-m.mount(document.getElementById('navbar'), NavBar);
-
-
-
 var Entries = {
   controller: function () {
     this.entries = m.prop([]);
@@ -128,8 +124,6 @@ var Entries = {
   }
 };
 
-m.mount(document.getElementById('main'), Entries);
-
 
 var Persons = {
   controller: function () {
@@ -156,16 +150,75 @@ var Persons = {
   }
 };
 
-m.mount(document.getElementById('persons'), Persons);
 
 
-setInterval(function () {
-    $.get("/api/accounts/session/check", function (r) {
-        if (r) {
-            $.get("/api/accounts/session/touch");
-        } else {
-            colsole.log("TODO");
-            logout();
-        }
-    });
+// setInterval(function () {
+//     $.get("/api/accounts/session/check", function (r) {
+//         if (r) {
+//             $.get("/api/accounts/session/touch");
+//         } else {
+//             colsole.log("TODO");
+//             logout();
+//         }
+//     });
+// });
+
+function template(nav, main) {
+  return m("div",
+           [m("nav.navbar.navbar-inverse.navbar-fixed-top",
+              [m(".container-fluid",
+                 [m(".navbar-header",
+                    m("a.navbar-brand[href='/'", { config: m.route })
+                   ),
+                  m("#navbar.navbar-collapse.collapse", nav)
+                 ]
+                )
+              ]),
+            m(".container-fluid",
+              m(".row",
+                [m(".col-sm-3.col-md-2.sidebar",
+                   m("ul.nav.nav-sidebar",
+                     [m("li.active", m("a[href='/']", { config: m.route }, "Overview")),
+                      m("li", m("a[href='#']", "Reports")),
+                      m("li", m("a[href='#']", "History")),
+                      m("li", m("a[href='#']", "Settings")),
+                      m("li", m("a[href='/docs']", { config: m.route }, "Export"))
+                     ])),
+                 m(".col-sm-9.col-sm-offset-3.col-md-10.col-md-offset-2.main",
+                   main)]))
+           ]);
+}
+
+var Home = {
+  controller: function () {
+
+  },
+
+  view: function (ctrl) {
+    return template(m.component(NavBar),
+                    [m("#persons.row", m.component(Persons)),
+                     m("h2.sub-header", "Entries"),
+                     m("#main", m.component(Entries))]);
+  }
+
+};
+
+var Docs = {
+  controller: function () {
+    this.docs = m.prop("");
+    m.request({method: "GET", url: "/api/docs"}).then(this.docs, console.error);
+  },
+
+  view: function (ctrl) {
+    return template(m.component(NavBar),
+                    [m("h2.sub-header", "Exporting Data"),
+                     m("p", "Currently, the best way to get data out is to use the API. Full documentation of it follows:"),
+                     m("pre", ctrl.docs())
+                    ]);
+  }
+};
+
+m.route(document.body, "/", {
+  "/": Home,
+  "/docs": Docs
 });

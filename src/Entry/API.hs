@@ -1,5 +1,7 @@
 module Entry.API where
 
+import Data.Time.Calendar
+import Data.Time.Clock
 import           Control.Monad                   (liftM)
 import           Control.Monad.IO.Class          (MonadIO, liftIO)
 import           Control.Monad.Trans.Either
@@ -22,9 +24,13 @@ import qualified Database.Redis                  as R
 import qualified Account.Session
 import           Entry.Types
 import           Servant
+import Servant.Docs
 
 
 type Api = "entries" :> QueryParam "token" Text :> Get [Entry]
+
+instance ToSample [Entry] where
+  toSample = Just [Entry 1 1 1 "apples" "groceries" (UTCTime (fromGregorian 2015 5 1) 0) 4.5]
 
 server :: PG.Connection -> R.Connection -> Server Api
 server pg r = getEntries pg r

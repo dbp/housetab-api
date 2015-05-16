@@ -16,6 +16,7 @@ import           Data.Text                  (Text)
 import qualified Data.Text.Encoding         as TE
 import           Opaleye
 import           System.Random              (randomRIO)
+import Servant.Docs
 
 data Account' a b c d e f g = Account { accountId             :: a
                                       , accountName           :: b
@@ -49,7 +50,6 @@ instance ToJSON ByteString where
 
 instance FromJSON ByteString where
     parseJSON o = parseJSON o >>= either fail return . B64.decode . TE.encodeUtf8
-
 
 deriving instance Generic (Account' a b c d e f g)
 instance ToJSON Account

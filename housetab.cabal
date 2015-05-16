@@ -39,6 +39,7 @@ Executable housetab
 
                , servant                     >= 0.2 && < 0.3
                , servant-server              >= 0.2 && < 0.3
+               , servant-docs
                -- servant deps
                , warp
 

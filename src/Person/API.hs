@@ -23,9 +23,12 @@ import qualified Database.Redis                  as R
 import qualified Account.Session
 import           Person.Types
 import           Servant
-
+import Servant.Docs
 
 type Api = "persons" :> QueryParam "token" Text :> Get [Person]
+
+instance ToSample [Person] where
+  toSample = Just [Person 1 1 "Emma G." 50, Person 1 1 "Leon T." 50]
 
 server :: PG.Connection -> R.Connection -> Server Api
 server pg r = getPersons pg r

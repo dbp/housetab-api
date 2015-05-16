@@ -1,5 +1,6 @@
 module Person.API where
 
+import Data.Time.Clock
 import           Control.Monad                   (liftM)
 import           Control.Monad.IO.Class          (MonadIO, liftIO)
 import           Control.Monad.Trans.Either
@@ -32,4 +33,5 @@ server pg r = getPersons pg r
           do maid <- liftIO $ Account.Session.get r token
              case maid of
                Nothing -> return []
-               Just account_id -> liftIO $ runQuery pg (getAccountPersons account_id)
+               Just account_id -> liftIO $ do now <- getCurrentTime
+                                              runQuery pg (getAccountPersons now account_id)

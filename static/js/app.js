@@ -148,7 +148,7 @@ var Persons = {
     var personsNodes = ctrl.persons().map(function (p) {
       return m(".generated.col-xs-6.col-sm-3",
                [m("h4", p.personName),
-                m("span.text-muted", 50)
+                m("span.text-muted", p.personCurrentShare)
                ]);
     });
 

@@ -38,13 +38,22 @@ var NavBar = {
 
   controller: function() {
     this.error = m.prop("");
-    this.username = m.prop("");
+    this.username = m.prop(localStorage["housetab_account"] || "");
     this.password = m.prop("");
   },
 
   view: function(ctrl) {
     function nav(d) {
-      return m("ul.nav.navbar-nav.navbar-right", [d, m("li", m("a", {href: "#"}, "About"))]);
+      return m(".container-fluid",
+               [m(".navbar-header",
+                  m("a.navbar-brand[href='/'", { config: m.route },
+                    "HouseTab: " + ctrl.username())),
+                m(".navbar-collapse.collapse",
+                  m("ul.nav.navbar-nav.navbar-right",
+                    [d,
+                     m("li", m("a", {href: "#"}, "About"))])
+                 )
+               ]);
     }
 
     if (typeof localStorage["housetab_token"] === "undefined") {
@@ -131,7 +140,6 @@ var Persons = {
 
     if (localStorage["housetab_token"]) {
       var token = localStorage["housetab_token"];
-      var set_persons = this.persons;
       m.request({
         method: "GET",
         url: "/api/persons?token=" + token}).then(this.persons, console.error);
@@ -163,24 +171,17 @@ var Persons = {
 //     });
 // });
 
-function template(nav, main) {
+function template(main) {
   return m("div",
            [m("nav.navbar.navbar-inverse.navbar-fixed-top",
-              [m(".container-fluid",
-                 [m(".navbar-header",
-                    m("a.navbar-brand[href='/'", { config: m.route })
-                   ),
-                  m("#navbar.navbar-collapse.collapse", nav)
-                 ]
-                )
-              ]),
+              m(".container-fluid", m.component(NavBar))),
             m(".container-fluid",
               m(".row",
                 [m(".col-sm-3.col-md-2.sidebar",
                    m("ul.nav.nav-sidebar",
                      [m("li.active", m("a[href='/']", { config: m.route }, "Overview")),
                       m("li", m("a[href='#']", "Reports")),
-                      m("li", m("a[href='#']", "History")),
+                      m("li", m("a[href='/history']", { config: m.route }, "History")),
                       m("li", m("a[href='#']", "Settings")),
                       m("li", m("a[href='/docs']", { config: m.route }, "Export"))
                      ])),
@@ -195,8 +196,7 @@ var Home = {
   },
 
   view: function (ctrl) {
-    return template(m.component(NavBar),
-                    [m("#persons.row", m.component(Persons)),
+    return template([m("#persons.row", m.component(Persons)),
                      m("h2.sub-header", "Entries"),
                      m("#main", m.component(Entries))]);
   }
@@ -210,15 +210,66 @@ var Docs = {
   },
 
   view: function (ctrl) {
-    return template(m.component(NavBar),
-                    [m("h2.sub-header", "Exporting Data"),
+    return template([m("h2.sub-header", "Exporting Data"),
                      m("p", "Currently, the best way to get data out is to use the API. Full documentation of it follows:"),
                      m("pre", ctrl.docs())
                     ]);
   }
 };
 
+var History = {
+  controller: function () {
+    this.log = m.prop([]);
+
+    if (localStorage["housetab_token"]) {
+      var token = localStorage["housetab_token"];
+      m.request({method: "GET",
+                 url: "/api/logs?token=" + token}).then(this.log, console.error);
+    }
+  },
+
+  view: function (ctrl) {
+
+    var logNodes = ctrl.log().map(function (e) {
+        return m("tr",
+                 [m("td", e.logCategoryOld),
+                  m("td", e.logCategoryNew),
+                  m("td", e.logWhatOld),
+                  m("td", e.logWhatNew),
+                  m("td", "$" + e.logHowMuchOld),
+                  m("td", "$" + e.logHowMuchNew),
+                  m("td", (new Date(e.logDateOld)).toLocaleDateString()),
+                  m("td", (new Date(e.logDateNew)).toLocaleDateString()),
+                 ]);
+      });
+
+    return template([m("h2.sub-header", "History"),
+                     m("#main",
+                       m(".table-responsive",
+                         [m("table.table.table-striped",
+                            [m("thead",
+                               [m("tr",
+                                  [m("th", "Category (Old)"),
+                                   m("th", "Category (New)"),
+                                   m("th", "What (Old)"),
+                                   m("th", "What (New)"),
+                                   m("th", "How Much (Old)"),
+                                   m("th", "How Much (New)"),
+                                   m("th", "Date (Old)"),
+                                   m("th", "Date (New)")
+                                  ])
+                               ]),
+                             m("tbody", logNodes)
+                            ])
+                         ]
+                        )
+                      )
+                    ]);
+  }
+};
+
 m.route(document.body, "/", {
   "/": Home,
-  "/docs": Docs
+  "/docs": Docs,
+  "/history": History
 });

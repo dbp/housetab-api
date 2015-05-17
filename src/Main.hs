@@ -3,6 +3,7 @@ module Main where
 import qualified Account.API
 import qualified Entry.API
 import qualified Person.API
+import qualified Log.API
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -17,6 +18,7 @@ import           Servant.Utils.StaticFiles
 type AppApi = "api" :> Account.API.Api
       :<|> "api" :> Entry.API.Api
       :<|> "api" :> Person.API.Api
+      :<|> "api" :> Log.API.Api
       :<|> Raw
 
 appApi :: Proxy AppApi
@@ -40,5 +42,6 @@ main = do
                    :<|> (Account.API.server pg redis)
                    :<|> (Entry.API.server pg redis)
                    :<|> (Person.API.server pg redis)
+                   :<|> (Log.API.server pg redis)
                    :<|> serveDirectory "static"
                    )

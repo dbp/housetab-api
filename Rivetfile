@@ -1,4 +1,1 @@
-dependencies = [ "dbp/rivet+rivet-migration"
-               ]
-
 database-password = "111"

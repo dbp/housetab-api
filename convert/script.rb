@@ -3,7 +3,7 @@ require 'mongo'
 require 'pg'
 
 M = Mongo::Client.new([ '127.0.0.1:27017' ], :database => 'housetab')
-PG = PG::Connection.open(:dbname => 'housetab_devel', :user => "housetab_user", :password => "111")
+PG = PG::Connection.open(:dbname => 'housetab_devel', :user => "housetab_user", :password => "111", :host => "localhost")
 
 
 def get_account_id(htid)
@@ -240,6 +240,8 @@ M[:history].find().each do |log|
         date_new = if !log['when']['n'].nil? then convert_date!(log['when']['n']) else nil end
         category_old = log['category']['o']
         category_new = log['category']['n']
+        what_old = log['what']['o']
+        what_new = log['what']['n']
         howmuch_old = log['howmuch']['o']
         howmuch_new = log['howmuch']['n']
       elsif type == 'add' || type == 'delete'
@@ -256,9 +258,10 @@ M[:history].find().each do |log|
       end
 
 
-      res = PG.exec_params('INSERT INTO log (account_id, type, who_old, who_new, category_old, category_new, date_old, date_new, howmuch_old, howmuch_new) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id',
+      res = PG.exec_params('INSERT INTO log (account_id, type, who_old, who_new, category_old, category_new, what_old, what_new, date_old, date_new, howmuch_old, howmuch_new) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id',
                            [account_id, type, who_old,
                             who_new, category_old, category_new,
+                            what_old, what_new,
                             date_old, date_new,
                             howmuch_old, howmuch_new])
 

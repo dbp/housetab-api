@@ -89,7 +89,7 @@ var NavBar = {
 
 
 var Entries = {
-  controller: function () {
+  controller: function (args) {
     this.entries = m.prop([]);
 
     if (localStorage["housetab_token"]) {
@@ -100,14 +100,20 @@ var Entries = {
     }
   },
 
-  view: function (ctrl) {
+  view: function (ctrl, args) {
+    var lookup_table = {};
+    args.persons().forEach(function (e) { lookup_table[e.personId] = e.personName; });
+    function person_name(id) {
+      return lookup_table[id];
+    }
     if (localStorage["housetab_token"] && localStorage["housetab_account"]) {
       var token = localStorage["housetab_token"];
       var account = localStorage["housetab_account"];
 
       var entryNodes = ctrl.entries().map(function (e) {
         return m("tr",
-                 [m("td", e.entryCategory),
+                 [m("td", person_name(e.entryWho)),
+                  m("td", e.entryCategory),
                   m("td", e.entryWhat),
                   m("td", "$" + e.entryHowMuch),
                   m("td", (new Date(e.entryDate)).toLocaleDateString()),
@@ -120,7 +126,8 @@ var Entries = {
                   [m("table.table.table-striped",
                      [m("thead",
                         [m("tr",
-                           [m("th", "Category"),
+                           [m("th", "Who"),
+                            m("th", "Category"),
                             m("th", "What"),
                             m("th", "How Much"),
                             m("th", "Date")
@@ -138,19 +145,17 @@ var Entries = {
 
 
 var Persons = {
-  controller: function () {
-    this.persons = m.prop([]);
-
+  controller: function (args) {
     if (localStorage["housetab_token"]) {
       var token = localStorage["housetab_token"];
       m.request({
         method: "GET",
-        url: "/api/persons?token=" + token}).then(this.persons, console.error);
+        url: "/api/persons?token=" + token}).then(args.persons, console.error);
     }
   },
 
-  view: function (ctrl) {
-    var personsNodes = ctrl.persons().map(function (p) {
+  view: function (ctrl, args) {
+    var personsNodes = args.persons().map(function (p) {
       return m(".generated.col-xs-6.col-sm-3",
                [m("h4", p.personName),
                 m("span.text-muted", p.personCurrentShare)
@@ -205,12 +210,12 @@ function template(main) {
 
 var Home = {
   controller: function () {
-
+    this.persons = m.prop([]);
   },
 
   view: function (ctrl) {
-    return template([m("#persons.row", m.component(Persons)),
-                     m("#main", m.component(Entries))]);
+    return template([m("#persons.row", m.component(Persons, { persons: ctrl.persons })),
+                     m("#main", m.component(Entries, { persons: ctrl.persons }))]);
   }
 
 };
@@ -232,28 +237,53 @@ var Docs = {
 var History = {
   controller: function () {
     this.log = m.prop([]);
+    this.persons = m.prop([]);
 
     if (localStorage["housetab_token"]) {
       var token = localStorage["housetab_token"];
       m.request({method: "GET",
                  url: "/api/logs?token=" + token}).then(this.log, console.error);
+      m.request({method: "GET",
+                 url: "/api/persons?token=" + token}).then(this.persons, console.error);
     }
   },
 
   view: function (ctrl) {
+    var lookup_table = {};
+    ctrl.persons().forEach(function (e) { lookup_table[e.personId] = e.personName; });
+    function person_name(id) {
+      return lookup_table[id];
+    }
 
     var logNodes = ctrl.log().map(function (e) {
-        return m("tr",
-                 [m("td", e.logCategoryOld),
-                  m("td", e.logCategoryNew),
-                  m("td", e.logWhatOld),
-                  m("td", e.logWhatNew),
-                  m("td", "$" + e.logHowMuchOld),
-                  m("td", "$" + e.logHowMuchNew),
-                  m("td", (new Date(e.logDateOld)).toLocaleDateString()),
-                  m("td", (new Date(e.logDateNew)).toLocaleDateString()),
-                 ]);
-      });
+      if (e.logDateOld) {
+        var old_date = (new Date(e.logDateOld)).toLocaleDateString();
+      }
+      if (e.logDateNew) {
+        var new_date = (new Date(e.logDateNew)).toLocaleDateString();
+      }
+
+      if (e.logHowMuchOld) {
+        var old_howmuch = "$" + e.logHowMuchOld;
+      }
+      if (e.logHowMuchNew) {
+        var new_howmuch = "$" + e.logHowMuchNew;
+      }
+
+      return m("tr",
+               [m("td", e.logType),
+                m("td", person_name(e.logWhoOld)),
+                m("td", person_name(e.logWhoNew)),
+                m("td", e.logCategoryOld),
+                m("td", e.logCategoryNew),
+                m("td", e.logWhatOld),
+                m("td", e.logWhatNew),
+                m("td", old_howmuch),
+                m("td", new_howmuch),
+                m("td", old_date),
+                m("td", new_date),
+               ]);
+    });
 
     return template([m("h2.sub-header", "History"),
                      m("#main",
@@ -261,7 +291,10 @@ var History = {
                          [m("table.table.table-striped",
                             [m("thead",
                                [m("tr",
-                                  [m("th", "Category (Old)"),
+                                  [m("th", "Type"),
+                                   m("th", "Who (Old)"),
+                                   m("th", "Who (New)"),
+                                   m("th", "Category (Old)"),
                                    m("th", "Category (New)"),
                                    m("th", "What (Old)"),
                                    m("th", "What (New)"),

@@ -30,7 +30,7 @@ import Servant.Docs
 type Api = "entries" :> QueryParam "token" Text :> Get [Entry]
 
 instance ToSample [Entry] where
-  toSample = Just [Entry 1 1 1 "apples" "groceries" (UTCTime (fromGregorian 2015 5 1) 0) 4.5]
+  toSample = Just [Entry 1 1 1 "apples" "groceries" (UTCTime (fromGregorian 2015 5 1) 0) 4.5 [1,2]]
 
 server :: PG.Connection -> R.Connection -> Server Api
 server pg r = getEntries pg r

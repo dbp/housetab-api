@@ -3,6 +3,7 @@ module Log.Types where
 import           GHC.Generics
 import           Prelude                    hiding (Sum)
 
+import Data.List (intercalate)
 import Control.Applicative ((<$>))
 import           Control.Arrow              (returnA)
 import qualified Crypto.Hash.SHA512         as SHA512
@@ -18,21 +19,24 @@ import qualified Data.Text.Encoding         as TE
 import           Data.Time.Clock
 import           Opaleye
 import           System.Random              (randomRIO)
+import qualified Opaleye.Internal.HaskellDB.PrimQuery as HPQ
 
-data Log' a b c d e f g h i j k l m = Log { logId        :: a
-                                          , logAccountId :: b
-                                          , logType       :: c
-                                          , logWhoOld      :: d
-                                          , logWhoNew      :: e
-                                          , logWhatOld  :: f
-                                          , logWhatNew  :: g
-                                          , logCategoryOld  :: h
-                                          , logCategoryNew  :: i
-                                          , logDateOld   :: j
-                                          , logDateNew   :: k
-                                          , logHowMuchOld :: l
-                                          , logHowMuchNew :: m
-                                          }
+data Log' a b c d e f g h i j k l m n o = Log { logId        :: a
+                                              , logAccountId :: b
+                                              , logType       :: c
+                                              , logWhoOld      :: d
+                                              , logWhoNew      :: e
+                                              , logWhatOld  :: f
+                                              , logWhatNew  :: g
+                                              , logCategoryOld  :: h
+                                              , logCategoryNew  :: i
+                                              , logDateOld   :: j
+                                              , logDateNew   :: k
+                                              , logHowMuchOld :: l
+                                              , logHowMuchNew :: m
+                                              , logWhoPaysOld :: n
+                                              , logWhoPaysNew :: o
+                                              }
 
 type Log = Log' Int
                 Int
@@ -47,6 +51,8 @@ type Log = Log' Int
                 (Maybe UTCTime)
                 (Maybe Double)
                 (Maybe Double)
+                (Maybe [Int])
+                (Maybe [Int])
 
 type NewLog = Log' ()
                    Int
@@ -61,6 +67,8 @@ type NewLog = Log' ()
                    (Maybe UTCTime)
                    (Maybe Double)
                    (Maybe Double)
+                   (Maybe [Int])
+                   (Maybe [Int])
 
 type LogColumn = Log' (Column PGInt4)
                       (Column PGInt4)
@@ -75,6 +83,8 @@ type LogColumn = Log' (Column PGInt4)
                       (Column (Nullable PGTimestamptz))
                       (Column (Nullable PGFloat8))
                       (Column (Nullable PGFloat8))
+                      (Column (Nullable (PGArray PGInt4)))
+                      (Column (Nullable (PGArray PGInt4)))
 
 type NewLogColumn = Log' (Maybe (Column PGInt4))
                          (Column PGInt4)
@@ -89,8 +99,10 @@ type NewLogColumn = Log' (Maybe (Column PGInt4))
                          (Column (Nullable PGTimestamptz))
                          (Column (Nullable PGFloat8))
                          (Column (Nullable PGFloat8))
+                         (Column (Nullable (PGArray PGInt4)))
+                         (Column (Nullable (PGArray PGInt4)))
 
-deriving instance Generic (Log' a b c d e f g h i j k l m)
+deriving instance Generic (Log' a b c d e f g h i j k l m n o)
 instance ToJSON Log
 instance FromJSON Log
 instance ToJSON NewLog
@@ -114,7 +126,12 @@ conv (Log {..}) = do
                , logDateNew      = maybeToNullable $ pgUTCTime <$> logDateNew
                , logHowMuchOld   = maybeToNullable $ pgDouble <$> logHowMuchOld
                , logHowMuchNew   = maybeToNullable $ pgDouble <$> logHowMuchNew
+               , logWhoPaysOld   = maybeToNullable $ pgInt4Array <$> logWhoPaysOld
+               , logWhoPaysNew   = maybeToNullable $ pgInt4Array <$> logWhoPaysNew
                }
+
+pgInt4Array :: [Int] -> Column (PGArray PGInt4)
+pgInt4Array l = literalColumn . HPQ.OtherLit $ "{" ++ (intercalate "," (map show l)) ++ "}"
 
 logTable :: Table NewLogColumn LogColumn
 logTable = Table "log" (pLog Log { logId = optional "id"
@@ -130,6 +147,8 @@ logTable = Table "log" (pLog Log { logId = optional "id"
                                  , logDateNew      = required "date_new"
                                  , logHowMuchOld   = required "howmuch_old"
                                  , logHowMuchNew   = required "howmuch_new"
+                                 , logWhoPaysOld   = required "whopays_old"
+                                 , logWhoPaysNew   = required "whopays_new"
                                  })
 
 logQuery :: Query LogColumn

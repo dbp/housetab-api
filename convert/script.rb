@@ -3,7 +3,9 @@ require 'mongo'
 require 'pg'
 
 M = Mongo::Client.new([ '127.0.0.1:27017' ], :database => 'housetab')
-PG = PG::Connection.open(:dbname => 'housetab_devel', :user => "housetab_user", :password => "111", :host => "localhost")
+P = PG::Connection.open(:dbname => 'housetab_devel', :user => "housetab_user", :password => "111", :host => "localhost")
+
+Mongo::Logger.logger.level = Logger::WARN
 
 
 def get_account_id(htid)
@@ -13,7 +15,7 @@ def get_account_id(htid)
   account = M[:users].find(:_id => id).first
 
   if not account.nil?
-    res = PG.exec_params("SELECT id from accounts where name = $1",
+    res = P.exec_params("SELECT id from accounts where name = $1",
                          [account["accountName"]])
     if not res.num_tuples.zero? then
       res.first.first[1].to_i
@@ -34,7 +36,7 @@ def get_person_id(pid)
   if person
     account_id = get_account_id(person["htid"])
     if account_id
-      res = PG.exec_params("SELECT id from persons where name = $1 and account_id = $2",
+      res = P.exec_params("SELECT id from persons where name = $1 and account_id = $2",
                            [person["name"], account_id])
       if not res.num_tuples.zero? then
         res.first.first[1].to_i
@@ -59,11 +61,27 @@ def get_person_id!(pid)
 end
 
 def convert_date!(date)
-  DateTime.new(date["year"], date["month"], date["day"])
+  if date["month"] > 12 && date["day"] <= 12
+    # NOTE(dbp 2015-05-17): One entry has this problem.
+    month = date["day"]
+    day = date["month"]
+  else
+    month = date["month"]
+    day = date["day"]
+  end
+  DateTime.new(date["year"], month, day)
+end
+
+def convert_date_safe(date)
+  begin
+    convert_date!(date)
+  rescue ArgumentError
+    nil
+  end
 end
 
 M[:users].find().each do |account|
-  res = PG.exec_params("SELECT id from accounts where email = $1", [account["accountEmail"]])
+  res = P.exec_params("SELECT id from accounts where name = $1", [account["accountName"]])
 
   if res.num_tuples.zero?
 
@@ -77,10 +95,10 @@ M[:users].find().each do |account|
     pass = `cabal run -v0 "#{account['accountName']}"`
     pass = pass.gsub!(/[\[\]]/,'').split(/\s*,\s*/).map(&:to_i).pack("C*")
 
-    PG.exec_params('INSERT INTO accounts (name, email, password, salt, tutorial_active, record_history) values ($1,$2,$3::bytea,$4,$5,$6)',
+    P.exec_params('INSERT INTO accounts (name, email, password, salt, tutorial_active, record_history) values ($1,$2,$3::bytea,$4,$5,$6)',
                    [account["accountName"], account["accountEmail"],
-                    PG.escape_bytea(pass),
-                    PG.escape_bytea(account["salt"]),
+                    P.escape_bytea(pass),
+                    P.escape_bytea(account["salt"]),
                     account["tutorialActive"],
                     account["recordHistory"]])
   else
@@ -131,20 +149,19 @@ M[:users].find().each do |account|
 end
 
 M[:people].find().each do |person|
-
   account_id = get_account_id(person["htid"])
 
   if account_id
     if get_person_id(person["_id"])
     # already exists
     else
-      res = PG.exec_params('INSERT INTO persons (account_id, name) values ($1,$2) RETURNING id',
+      res = P.exec_params('INSERT INTO persons (account_id, name) values ($1,$2) RETURNING id',
                            [account_id, person["name"]])
       if not res.num_tuples.zero? then
         person_id =  res.first.first[1].to_i
         person["shares"].each do |share|
           date = convert_date!(share['date'])
-          PG.exec_params('INSERT INTO shares (person_id, start, value) values ($1,$2,$3)',
+          P.exec_params('INSERT INTO shares (person_id, start, value) values ($1,$2,$3)',
                          [person_id, date, share["value"]])
         end
       else
@@ -172,7 +189,6 @@ end
 
 
 M[:entries].find().each do |entry|
-
   account_id = get_account_id(entry["htid"])
 
   if account_id
@@ -181,25 +197,16 @@ M[:entries].find().each do |entry|
 
       if who_id
         date = convert_date!(entry["when"])
+        whopays = entry["whopays"].map{|w| get_person_id(w)}.to_a
 
-        res = PG.exec_params('INSERT INTO entries (account_id, who, what, category, date, howmuch) values ($1,$2,$3,$4,$5,$6) RETURNING id',
+        res = P.exec_params('INSERT INTO entries (account_id, who, what, category, date, howmuch, whopays) values ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
                              [account_id, who_id, entry["what"],
-                              entry["category"], date, entry["howmuch"]])
-
-        if not res.num_tuples.zero? then
-          entry_id =  res.first.first[1].to_i
-          whopays = entry["whopays"].map{|w| get_person_id(w)}
-          whopays.each do |person_id|
-            PG.exec_params('INSERT INTO entries_whopays (entry_id, person_id) values ($1,$2)',
-                           [entry_id, person_id])
-          end
-        else
-          puts "Couldn't get ID from entry: #{entry}"
-        end
+                              entry["category"], date, entry["howmuch"], "{" + whopays.join(",") + "}"])
       else
         puts "Couldn't find who person: #{entry}"
       end
-    rescue ArgumentError
+    rescue ArgumentError => e
+      puts e
       puts "Couldn't figure out date: #{entry}"
     end
   else
@@ -228,6 +235,15 @@ M[:history].find().each do |log|
 
   account_id = get_account_id(log["htid"])
 
+  def format_array(a)
+    if a
+      "{" + a.join(",") + "}"
+    else
+      nil
+    end
+  end
+
+
   if account_id
     begin
 
@@ -236,64 +252,64 @@ M[:history].find().each do |log|
       if type == 'edit'
         who_old = get_person_id!(log['who']['o'])
         who_new = if !log['who']['n'].nil? then get_person_id!(log['who']['n']) else nil end
-        date_old = convert_date!(log['when']['o'])
-        date_new = if !log['when']['n'].nil? then convert_date!(log['when']['n']) else nil end
+        date_old = convert_date_safe(log['when']['o'])
+        date_new = if !log['when']['n'].nil? then convert_date_safe(log['when']['n']) else nil end
         category_old = log['category']['o']
         category_new = log['category']['n']
         what_old = log['what']['o']
         what_new = log['what']['n']
         howmuch_old = log['howmuch']['o']
         howmuch_new = log['howmuch']['n']
-      elsif type == 'add' || type == 'delete'
+        if log["whopays"]['o']
+          whopays_old = format_array(log["whopays"]['o'].map{|w| get_person_id(w)}.to_a)
+        else
+          whopays_old = nil
+        end
+        if log["whopays"]['n']
+          whopays_new = format_array(log["whopays"]['n'].map{|w| get_person_id(w)}.to_a)
+        else
+          whopays_new = nil
+        end
+      elsif type == 'delete'
+        who_new = nil
+        who_old = get_person_id!(log['who'])
+        date_new = nil
+        date_old = convert_date_safe(log['when'])
+        category_new = nil
+        category_old = log['category']
+        howmuch_new = nil
+        howmuch_old = log['howmuch']
+        what_new = nil
+        what_old = log['what']
+        whopays_old = format_array(log["whopays"].map{|w| get_person_id(w)}.to_a)
+        whopays_new = nil
+      elsif type == 'add'
         who_old = nil
         who_new = get_person_id!(log['who'])
         date_old = nil
-        date_new = convert_date!(log['when'])
+        date_new = convert_date_safe(log['when'])
         category_old = nil
         category_new = log['category']
         howmuch_old = nil
         howmuch_new = log['howmuch']
+        what_old = nil
+        what_new = log['what']
+        whopays_old = format_array(log["whopays"].map{|w| get_person_id(w)}.to_a)
+        whopays_new = nil
       else
         raise "Don't understand type: #{type} for log entry #{log}"
       end
 
 
-      res = PG.exec_params('INSERT INTO log (account_id, type, who_old, who_new, category_old, category_new, what_old, what_new, date_old, date_new, howmuch_old, howmuch_new) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id',
+      res = P.exec_params('INSERT INTO log (account_id, type, who_old, who_new, category_old, category_new, what_old, what_new, date_old, date_new, howmuch_old, howmuch_new, whopays_old, whopays_new) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id',
                            [account_id, type, who_old,
                             who_new, category_old, category_new,
                             what_old, what_new,
                             date_old, date_new,
-                            howmuch_old, howmuch_new])
-
-      if not res.num_tuples.zero? then
-        log_id =  res.first.first[1].to_i
-
-        if type == 'edit'
-          log["whopays"]['o'].map{|w| get_person_id(w)}.each do |person_id|
-            PG.exec_params('INSERT INTO log_whopays_old (log_id, person_id) values ($1,$2)',
-                           [log_id, person_id])
-          end
-          if !log["whopays"]['n'].nil?
-            log["whopays"]['n'].map{|w| get_person_id(w)}.each do |person_id|
-              PG.exec_params('INSERT INTO log_whopays_new (log_id, person_id) values ($1,$2)',
-                             [log_id, person_id])
-            end
-          end
-        elsif type == 'add' || type == 'delete'
-          if !log["whopays"].nil?
-            log["whopays"].map{|w| get_person_id(w)}.each do |person_id|
-              PG.exec_params('INSERT INTO log_whopays_new (log_id, person_id) values ($1,$2)',
-                             [log_id, person_id])
-            end
-          end
-        else
-          raise "Don't understand type: #{type} for log entry #{log}"
-        end
-      else
-        puts "Couldn't get ID from inserted log: #{log}"
-      end
-
-    rescue
+                            howmuch_old, howmuch_new,
+                            whopays_old, whopays_new])
+    rescue StandardError => e
+      puts e
       puts "Couldn't figure out log entry: #{log}"
     end
   else

@@ -30,10 +30,10 @@ import Servant.Docs
 type Api = "logs" :> QueryParam "token" Text :> Get [Log]
 
 instance ToSample [Log] where
-  toSamples = [("Addition", [Log 1 1 "add" Nothing (Just 1) Nothing (Just "apples") Nothing (Just "groceries") Nothing (Just (UTCTime (fromGregorian 2015 5 1) 0)) Nothing (Just 20.5)]
+  toSamples = [("Addition", [Log 1 1 "add" Nothing (Just 1) Nothing (Just "apples") Nothing (Just "groceries") Nothing (Just (UTCTime (fromGregorian 2015 5 1) 0)) Nothing (Just 20.5) Nothing (Just [1,2])]
                )
-              ,("Edit", [Log 1 1 "edit" Nothing (Just 1) (Just "pears") (Just "apples") Nothing (Just "groceries") Nothing (Just (UTCTime (fromGregorian 2015 5 1) 0)) (Just 40.8) (Just 20.5)])
-              ,("Delete", [Log 1 1 "delete" Nothing (Just 1) (Just "pears") Nothing (Just "groceries") Nothing (Just (UTCTime (fromGregorian 2015 5 1) 0)) Nothing (Just 40.8) Nothing])]
+              ,("Edit", [Log 1 1 "edit" Nothing (Just 1) (Just "pears") (Just "apples") Nothing (Just "groceries") Nothing (Just (UTCTime (fromGregorian 2015 5 1) 0)) (Just 40.8) (Just 20.5) (Just [1,2]) Nothing])
+              ,("Delete", [Log 1 1 "delete" (Just 1) Nothing (Just "pears") Nothing (Just "groceries") Nothing (Just (UTCTime (fromGregorian 2015 5 1) 0)) Nothing (Just 40.8) Nothing (Just [1,2]) Nothing])]
 
 server :: PG.Connection -> R.Connection -> Server Api
 server pg r = getLogs pg r

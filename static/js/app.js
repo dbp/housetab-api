@@ -117,6 +117,7 @@ var Entries = {
                   m("td", e.entryWhat),
                   m("td", "$" + e.entryHowMuch),
                   m("td", (new Date(e.entryDate)).toLocaleDateString()),
+                  m("td", e.entryWhoPays.map(person_name).join(", "))
                  ]);
       });
 
@@ -130,7 +131,8 @@ var Entries = {
                             m("th", "Category"),
                             m("th", "What"),
                             m("th", "How Much"),
-                            m("th", "Date")
+                            m("th", "Date"),
+                            m("th", "Who Pays")
                            ])
                         ]),
                       m("tbody", entryNodes)
@@ -270,6 +272,13 @@ var History = {
         var new_howmuch = "$" + e.logHowMuchNew;
       }
 
+      if (e.logWhoPaysOld) {
+        var old_whopays = e.logWhoPaysOld.map(person_name).join(", ");
+      }
+      if (e.logWhoPaysNew) {
+        var new_whopays = e.logWhoPaysNew.map(person_name).join(", ");
+      }
+
       return m("tr",
                [m("td", e.logType),
                 m("td", person_name(e.logWhoOld)),
@@ -282,6 +291,8 @@ var History = {
                 m("td", new_howmuch),
                 m("td", old_date),
                 m("td", new_date),
+                m("td", old_whopays),
+                m("td", new_whopays),
                ]);
     });
 
@@ -301,7 +312,9 @@ var History = {
                                    m("th", "How Much (Old)"),
                                    m("th", "How Much (New)"),
                                    m("th", "Date (Old)"),
-                                   m("th", "Date (New)")
+                                   m("th", "Date (New)"),
+                                   m("th", "Who Pays (Old)"),
+                                   m("th", "Who Pays (New)")
                                   ])
                                ]),
                              m("tbody", logNodes)

@@ -8,8 +8,7 @@ var NavBar = {
     var token = localStorage["housetab_token"];
     delete localStorage["housetab_token"];
     delete localStorage["housetab_account"];
-    $.get("/api/accounts/session/delete?token=" + token);
-    ctrl.error("");
+    m.request({method: "GET", url: "/api/accounts/session/delete?token=" + token}).then(function() { ctrl.error(""); m.route("/"); }, ctrl.error);
     return;
   },
   login: function (e, ctrl) {
@@ -28,6 +27,7 @@ var NavBar = {
                    localStorage["housetab_token"] = data.contents;
                    localStorage["housetab_account"] = username;
                    ctrl.error("");
+                   m.route("/");
                  } else {
                    ctrl.error("Username or password incorrect");
                  }
@@ -114,21 +114,24 @@ var Entries = {
                  ]);
       });
 
-      return m(".table-responsive",
-               [m("table.table.table-striped",
-                  [m("thead",
-                     [m("tr",
-                        [m("th", "Category"),
-                         m("th", "What"),
-                         m("th", "How Much"),
-                         m("th", "Date")
-                        ])
-                     ]),
-                   m("tbody", entryNodes)
+      return m("div",
+               [m("h2.sub-header", "Entries"),
+                m(".table-responsive",
+                  [m("table.table.table-striped",
+                     [m("thead",
+                        [m("tr",
+                           [m("th", "Category"),
+                            m("th", "What"),
+                            m("th", "How Much"),
+                            m("th", "Date")
+                           ])
+                        ]),
+                      m("tbody", entryNodes)
+                     ])
                   ])
                ]);
     } else {
-      return;
+      return m("div");
     }
   }
 };
@@ -172,6 +175,21 @@ var Persons = {
 // });
 
 function template(main) {
+  if (localStorage["housetab_token"]) {
+    if (m.route() === "/") { var e_active = ".active"; } else { var e_active = "" }
+    if (m.route() === "/history") { var h_active = ".active"; } else { var h_active = "" }
+    if (m.route() === "/docs") { var d_active = ".active"; } else { var d_active = "" }
+
+    var menu = [m("li" + e_active, m("a[href='/']", { config: m.route }, "Entries")),
+                m("li", m("a[href='#']", "Reports")),
+                m("li" + h_active, m("a[href='/history']", { config: m.route }, "History")),
+                m("li", m("a[href='#']", "Settings")),
+                m("li" + d_active, m("a[href='/docs']", { config: m.route }, "Export"))
+               ];
+  } else {
+    var menu = [];
+  }
+
   return m("div",
            [m("nav.navbar.navbar-inverse.navbar-fixed-top",
               m(".container-fluid", m.component(NavBar))),
@@ -179,12 +197,7 @@ function template(main) {
               m(".row",
                 [m(".col-sm-3.col-md-2.sidebar",
                    m("ul.nav.nav-sidebar",
-                     [m("li.active", m("a[href='/']", { config: m.route }, "Overview")),
-                      m("li", m("a[href='#']", "Reports")),
-                      m("li", m("a[href='/history']", { config: m.route }, "History")),
-                      m("li", m("a[href='#']", "Settings")),
-                      m("li", m("a[href='/docs']", { config: m.route }, "Export"))
-                     ])),
+                     menu)),
                  m(".col-sm-9.col-sm-offset-3.col-md-10.col-md-offset-2.main",
                    main)]))
            ]);
@@ -197,7 +210,6 @@ var Home = {
 
   view: function (ctrl) {
     return template([m("#persons.row", m.component(Persons)),
-                     m("h2.sub-header", "Entries"),
                      m("#main", m.component(Entries))]);
   }
 

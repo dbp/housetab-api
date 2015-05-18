@@ -44,3 +44,5 @@ Executable housetab
                , warp
 
                , hedis                       >= 0.6 && < 0.7
+
+               , QuickCheck >= 2.0 && < 3

@@ -25,6 +25,10 @@ data Person' a b c d = Person { personId        :: a
                               }
 
 type Person = Person' Int Int Text Double
+deriving instance Show Person
+deriving instance Eq Person
+deriving instance Ord Person
+
 type NewPerson = Person' () Int Text ()
 
 type PersonColumn = Person' (Column PGInt4)
@@ -58,6 +62,10 @@ data Share' a b c d = Share { shareId :: a
                             }
 
 type Share = Share' Int Int UTCTime Double
+deriving instance Show Share
+deriving instance Eq Share
+deriving instance Ord Share
+
 type ShareColumn = Share' (Column PGInt4)
                           (Column PGInt4)
                           (Column PGTimestamptz)
@@ -104,3 +112,9 @@ getAccountPersons now account_id = proc () ->
    do person <- personQuery now -< ()
       restrict -< personAccountId person .== pgInt4 account_id
       returnA -< person
+
+getPersonShares :: Int -> Query ShareColumn
+getPersonShares person_id = proc () ->
+   do share <- queryTable shareTable  -< ()
+      restrict -< sharePersonId share .== pgInt4 person_id
+      returnA -< share

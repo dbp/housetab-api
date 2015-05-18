@@ -148,19 +148,53 @@ var Entries = {
 
 var Persons = {
   controller: function (args) {
+    this.result = m.prop(null);
+
     if (localStorage["housetab_token"]) {
       var token = localStorage["housetab_token"];
       m.request({
         method: "GET",
         url: "/api/persons?token=" + token}).then(args.persons, console.error);
+      m.request({
+        method: "GET",
+        url: "/api/result?token=" + token}).then(this.result, console.error);
     }
   },
 
   view: function (ctrl, args) {
+    if (typeof ctrl.result() !== "null") {
+      var get_result = function (p) {
+        var r = ctrl.result().people.filter(function (e) {
+          return e[0].personId === p;
+        });
+        if (r.length !== 0) {
+          return r[0];
+        }
+      };
+    } else {
+      var get_result = function (p) {
+        return null;
+      }
+    }
+    function format_money(m) {
+      if (m < 0) {
+        return "-$" + (m * -1).toFixed(2);
+      } else {
+        return "$" + m.toFixed(2);
+      }
+    }
     var personsNodes = args.persons().map(function (p) {
+
+      var r = get_result(p.personId);
+      if (typeof r !== "null") {
+        var spent = "Spent: " + format_money(r[1]);
+        var owes = format_money(r[2]);
+      }
       return m(".generated.col-xs-6.col-sm-3",
                [m("h4", p.personName),
-                m("span.text-muted", p.personCurrentShare)
+                m("h5", spent),
+                m("span.text-muted", p.personCurrentShare),
+                m("h3", owes)
                ]);
     });
 

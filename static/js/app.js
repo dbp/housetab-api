@@ -123,7 +123,7 @@ var Entries = {
 
       return m("div",
                [m("h2.sub-header", "Entries"),
-                m(".table-responsive",
+                m(".table-responsive.well.well-lg",
                   [m("table.table.table-striped",
                      [m("thead",
                         [m("tr",
@@ -187,15 +187,21 @@ var Persons = {
 
       var r = get_result(p.personId);
       if (typeof r !== "null") {
-        var spent = "Spent: " + format_money(r[1]);
+        var spent = "spent " + format_money(r[1]);
         var owes = format_money(r[2]);
       }
       return m(".generated.col-xs-6.col-sm-3",
-               [m("h4", p.personName),
-                m("h5", spent),
-                m("span.text-muted", p.personCurrentShare),
-                m("h3", owes)
-               ]);
+               m(".panel.panel-default",
+                 [m(".panel-heading", m(".panel-title",
+                                        [p.personName + " ",
+                                         m("span.label.label-default.pull-right", spent),
+                                         m("span.label.label-primary.pull-right",
+                                           "at " + p.personCurrentShare + " shares"),
+                                         m(".clearfix")
+                                        ])),
+                  m(".panel-body", [
+                                    m("h3.text-center", owes)])
+                 ]));
     });
 
     return m("div", personsNodes);

@@ -30,20 +30,20 @@ import Servant.Docs
 newtype Success = Success Bool deriving Generic
 instance ToJSON Success
 
-type Api = "accounts" :> ReqBody NewAccount :> Post Account
+type Api = "accounts" :> ReqBody '[JSON] NewAccount :> Post '[JSON] Account
       :<|> "accounts" :> "session" :> "new"
                       :> QueryParam "name" Text
                       :> QueryParam "password" Text
-                      :> Get Account.Session.Authentication
+                      :> Get '[JSON] Account.Session.Authentication
       :<|> "accounts" :> "session" :> "check"
                       :> QueryParam "token" Text
-                      :> Get Success
+                      :> Get '[JSON] Success
       :<|> "accounts" :> "session" :> "touch"
                       :> QueryParam "token" Text
-                      :> Get Success
+                      :> Get '[JSON] Success
       :<|> "accounts" :> "session" :> "delete"
                       :> QueryParam "token" Text
-                      :> Get Success
+                      :> Get '[JSON] Success
 
 
 instance ToParam (QueryParam "name" Text) where
@@ -67,20 +67,20 @@ instance ToParam (QueryParam "token" Text) where
                   "A session token retrieved from the API, used for authenticating requests."
                   Normal
 
-instance ToSample Success where
-  toSamples = [("Operation succeeded.", Success True)
-              ,("Operation failed.", Success False)]
+instance ToSample Success Success where
+  toSamples _ = [("Operation succeeded.", Success True)
+                ,("Operation failed.", Success False)]
 
-instance ToSample Account where
-  toSample = Just (Account 1 "ghouse" "emma@housetab.org" "hteo02h2th" "1111" False True)
+instance ToSample Account Account where
+  toSample _ = Just (Account 1 "ghouse" "emma@housetab.org" "hteo02h2th" "1111" False True)
 
-instance ToSample NewAccount where
-  toSample = Just (Account () "ghouse" "emma@housetab.org" "password" () False True)
+instance ToSample NewAccount NewAccount where
+  toSample _ = Just (Account () "ghouse" "emma@housetab.org" "password" () False True)
 
-instance ToSample Account.Session.Authentication where
-  toSamples = [("Successfully authenticated, contains the session token."
-               ,Account.Session.Authed "abcde")
-              ,("Failed to authenticate.", Account.Session.NotAuthed)]
+instance ToSample Account.Session.Authentication Account.Session.Authentication where
+  toSamples _ = [("Successfully authenticated, contains the session token."
+                 ,Account.Session.Authed "abcde")
+                ,("Failed to authenticate.", Account.Session.NotAuthed)]
 
 server :: PG.Connection -> R.Connection -> Server Api
 server pg r = postAccount pg

@@ -29,20 +29,20 @@ Executable housetab
                , time >= 1.5
 
                -- applcation specific, perhaps unstable, libraries.
-               , postgresql-simple           >= 0.4     && < 0.5
+               , postgresql-simple           >= 0.4
 
-               , rivet-migration             >= 0.1     && < 0.2
+               , rivet-migration             >= 0.1
 
-               , opaleye                     >= 0.3.1.2 && < 0.4
+               , opaleye                     >= 0.3.1.2
                 -- opaleye deps
                , product-profunctors
 
-               , servant                     >= 0.2 && < 0.3
-               , servant-server              >= 0.2 && < 0.3
+               , servant                     >= 0.4
+               , servant-server              >= 0.4
                , servant-docs
                -- servant deps
                , warp
 
-               , hedis                       >= 0.6 && < 0.7
+               , hedis                       >= 0.6
 
                , QuickCheck >= 2.0 && < 3

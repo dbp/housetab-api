@@ -25,10 +25,10 @@ import           Person.Types
 import           Servant
 import Servant.Docs
 
-type Api = "persons" :> QueryParam "token" Text :> Get [Person]
+type Api = "persons" :> QueryParam "token" Text :> Get '[JSON] [Person]
 
-instance ToSample [Person] where
-  toSample = Just [Person 1 1 "Emma G." 50, Person 1 1 "Leon T." 50]
+instance ToSample [Person] [Person] where
+  toSample _ = Just [Person 1 1 "Emma G." 50, Person 1 1 "Leon T." 50]
 
 server :: PG.Connection -> R.Connection -> Server Api
 server pg r = getPersons pg r

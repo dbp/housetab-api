@@ -30,21 +30,21 @@ type Api = "api" :> Account.API.Api
       :<|> "api" :> Person.API.Api
       :<|> "api" :> Log.API.Api
       :<|> "api" :> ResultApi
-      :<|> "api" :> "docs" :> Get Text
+      :<|> "api" :> "docs" :> Get '[JSON] Text
       :<|> Raw
 
-instance ToSample Text where
-  toSample = Just "Text according to endpoint."
+instance ToSample Text Text where
+  toSample _ = Just "Text according to endpoint."
 
 api :: Proxy Api
 api = Proxy
 
-type ResultApi = "result" :> QueryParam "token" Text :> Get Lib.Result
+type ResultApi = "result" :> QueryParam "token" Text :> Get '[JSON] Lib.Result
 instance ToJSON Lib.Result
-instance ToSample Lib.Result where
-  toSample = Just (Lib.Result [(Person.Types.Person 1 1 "Jane" 50.0, 100.0, 20.0)
-                              ,(Person.Types.Person 1 1 "John" 50.0, 140.0, -20.0)]
-                              (2015, 5, 1))
+instance ToSample Lib.Result Lib.Result where
+  toSample _ = Just (Lib.Result [(Person.Types.Person 1 1 "Jane" 50.0, 100.0, 20.0)
+                                ,(Person.Types.Person 1 1 "John" 50.0, 140.0, -20.0)]
+                                (2015, 5, 1))
 
 result :: PG.Connection -> R.Connection -> Server ResultApi
 result pg r (Just token) =

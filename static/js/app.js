@@ -2,6 +2,14 @@ if (typeof localStorage == 'undefined') {
   throw new Error("No localStorage.");
 }
 
+var Signup = {
+  controller: function () {
+  },
+  view: function (ctrl) {
+    return m("div");
+  }
+};
+
 var NavBar = {
   logout: function (e, ctrl) {
     e.preventDefault();
@@ -44,43 +52,45 @@ var NavBar = {
 
   view: function(ctrl) {
     function nav(d) {
-      return m(".container-fluid",
-               [m(".navbar-header",
-                  m("a.navbar-brand[href='/'", { config: m.route },
-                    "HouseTab: " + ctrl.username())),
-                m(".navbar-collapse.collapse",
-                  m("ul.nav.navbar-nav.navbar-right",
-                    [d,
-                     m("li", m("a", {href: "#"}, "About"))])
-                 )
-               ]);
+      return m("div",
+               [m(".title", [m(".about", "for the account of"),
+                             m("img[src=/img/glyph.png]"),
+                             ctrl.username()]),
+                m(".row",
+                  m(".col-md-12", m("ul.nav.nav-sidebar", d)))]) ;
     }
 
     if (typeof localStorage["housetab_token"] === "undefined") {
       return nav(
-        m("li.generated",
-          m("form.navbar-form.navbar-right",
-            [m("span.label.label-danger", ctrl.error()),
-             m("input.form-control",  {placeholder: "Username...",
-                                       oninput: m.withAttr("value", ctrl.username),
-                                       value: ctrl.username()}),
-             m("input.form-control", {type: "password",
-                                      placeholder: "Password...",
-                                      oninput: m.withAttr("value", ctrl.password),
-                                      value: ctrl.password()}),
-             m("input.form-control", {type: "submit",
-                                      value: "Login",
-                                      onclick: function(e) { NavBar.login(e,ctrl) }})
-            ]
-           )
-         )
+        [m("li",
+           m("form",
+             [m("span.label.label-danger", ctrl.error()),
+              m("input.form-control",  {placeholder: "Username...",
+                                        oninput: m.withAttr("value", ctrl.username),
+                                        value: ctrl.username()}),
+              m("input.form-control", {type: "password",
+                                       placeholder: "Password...",
+                                       oninput: m.withAttr("value", ctrl.password),
+                                       value: ctrl.password()}),
+              m("input.form-control", {type: "submit",
+                                       value: "Login",
+                                       onclick: function(e) { NavBar.login(e,ctrl) }})
+             ]
+            )
+          ),
+         m("li",
+           m(".signup",
+             m("a.btn[href='/signup']", { config: m.route }, "Signup")))
+         ]
       );
     } else {
       return nav(
-        m("li.generated", m("a", {href: "#",
-                                  onclick: function (e) { NavBar.logout(e,ctrl) }
-                                 },
-                            "Logout"))
+        m("li",
+          m("a", {href: "#",
+                  onclick: function (e) { NavBar.logout(e,ctrl) }
+                 },
+            "Logout")
+         )
       );
     }
   }
@@ -190,7 +200,7 @@ var Persons = {
         var spent = "spent " + format_money(r[1]);
         var owes = format_money(r[2]);
       }
-      return m(".generated.col-xs-6.col-sm-3",
+      return m(".generated.col-xs-4.col-sm-2",
                m(".panel.panel-default",
                  [m(".panel-heading", m(".panel-title",
                                         [p.personName + " ",
@@ -238,15 +248,14 @@ function template(main) {
   }
 
   return m("div",
-           [m("nav.navbar.navbar-inverse.navbar-fixed-top",
-              m(".container-fluid", m.component(NavBar))),
-            m(".container-fluid",
-              m(".row",
-                [m(".col-sm-3.col-md-2.sidebar",
-                   m("ul.nav.nav-sidebar",
-                     menu)),
-                 m(".col-sm-9.col-sm-offset-3.col-md-10.col-md-offset-2.main",
-                   main)]))
+           [m(".row",
+              [m(".col-sm-2.col-md-1.sidebar",
+                 [m.component(NavBar),
+                  m("ul.nav.nav-sidebar",
+                    [menu])
+                 ]),
+               m(".col-sm-9.col-sm-offset-2.col-md-11.col-md-offset-1.main",
+                 main)])
            ]);
 }
 
@@ -368,6 +377,7 @@ var History = {
 
 m.route(document.body, "/", {
   "/": Home,
+  "/signup" : Signup,
   "/docs": Docs,
   "/history": History
 });

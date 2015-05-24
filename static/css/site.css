@@ -5,8 +5,37 @@
 /* Move down content because we have a fixed navbar that is 50px tall */
 body {
   padding-top: 50px;
+  background-image: url("/img/grid.png");
 }
 
+.banner {
+  height: 288px;
+  background-image: url("/img/bar.png");
+  background-repeat: repeat-x;
+}
+
+.placeholder  {
+  width: 472px;
+  height: 288px;
+  margin: 0 auto;
+  margin-top: -50px;
+  background-image: url("/img/banner.png");
+}
+
+.placeholder .short {
+  padding-top: 212px;
+  font-size: 18px;
+  text-align: center;
+  color: #5184a1;
+  text-transform: uppercase;
+}
+
+.placeholder .message {
+  padding-top: 3px;
+  text-align: center;
+  font-weight: bold;
+  color: white;
+}
 
 /*
  * Global add-ons

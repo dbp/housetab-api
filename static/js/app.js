@@ -2,7 +2,25 @@ if (typeof localStorage == 'undefined') {
   throw new Error("No localStorage.");
 }
 
-var Signup = {
+var app = {};
+
+app.session = {};
+app.session.init = function () {
+  this.username = m.prop(localStorage["housetab_account"] || "");
+  this.token = m.prop(localStorage["housetab_token"] || "");
+};
+
+app.session.init();
+
+app.data = {};
+app.data.init = function () {
+  this.entries = m.prop([]);
+  this.persons = m.prop([]);
+  this.result = m.prop({})
+  this.log = m.prop([]); 
+};
+
+app.Signup = {
   controller: function () {
   },
   view: function (ctrl) {
@@ -10,18 +28,22 @@ var Signup = {
   }
 };
 
-var NavBar = {
+app.NavBar = {
   logout: function (e, ctrl) {
     e.preventDefault();
-    var token = localStorage["housetab_token"];
+    var token = app.session.token();
     delete localStorage["housetab_token"];
     delete localStorage["housetab_account"];
-    m.request({method: "GET", url: "/api/accounts/session/delete?token=" + token}).then(function() { ctrl.error(""); m.route("/"); }, ctrl.error);
+    app.session.token("");
+    app.session.username("");
+    m.request({method: "GET", url: "/api/accounts/session/delete?token=" + token}).
+      then(function() { ctrl.error(""); m.route("/"); },
+           ctrl.error);
     return;
   },
   login: function (e, ctrl) {
     e.preventDefault();
-    var username = ctrl.username();
+    var username = app.session.username();
     var password = ctrl.password();
     if (!username || !password) {
       ctrl.error("Username and password required.");
@@ -33,6 +55,7 @@ var NavBar = {
                username + "&password=" + password}).then(function (data) {
                  if (data.tag === 'Authed') {
                    localStorage["housetab_token"] = data.contents;
+                   app.session.token(data.contents);
                    localStorage["housetab_account"] = username;
                    ctrl.error("");
                    m.route("/");
@@ -46,81 +69,72 @@ var NavBar = {
 
   controller: function() {
     this.error = m.prop("");
-    this.username = m.prop(localStorage["housetab_account"] || "");
     this.password = m.prop("");
   },
 
   view: function(ctrl) {
-    function nav(d) {
-      return m("div",
-               [m(".title", [m(".about", "for the account of"),
-                             m("img[src=/img/glyph.png]"),
-                             ctrl.username()]),
-                m(".row",
-                  m(".col-md-12", m("ul.nav.nav-sidebar", d)))]) ;
-    }
-
-    if (typeof localStorage["housetab_token"] === "undefined") {
-      return nav(
-        [m("li",
-           m("form",
-             [m("span.label.label-danger", ctrl.error()),
-              m("input.form-control",  {placeholder: "Username...",
-                                        oninput: m.withAttr("value", ctrl.username),
-                                        value: ctrl.username()}),
-              m("input.form-control", {type: "password",
-                                       placeholder: "Password...",
-                                       oninput: m.withAttr("value", ctrl.password),
-                                       value: ctrl.password()}),
-              m("input.form-control", {type: "submit",
-                                       value: "Login",
-                                       onclick: function(e) { NavBar.login(e,ctrl) }})
-             ]
-            )
-          ),
-         m("li",
-           m(".signup",
-             m("a.btn[href='/signup']", { config: m.route }, "Signup")))
-         ]
-      );
+    
+    if (app.session.token() === "") {
+      return m("ul.nav.nav-sidebar",
+               [m("li",
+                  m("form",
+                    [m("span.label.label-danger", ctrl.error()),
+                     m("input.form-control",  {placeholder: "Username...",
+                                               oninput: m.withAttr("value", app.session.username),
+                                               value: app.session.username()}),
+                     m("input.form-control", {type: "password",
+                                              placeholder: "Password...",
+                                              oninput: m.withAttr("value", ctrl.password),
+                                              value: ctrl.password()}),
+                     m("input.form-control", {type: "submit",
+                                              value: "Login",
+                                              onclick: function(e) { app.NavBar.login(e,ctrl) }})
+                    ]
+                   )
+                 ),
+                m("li",
+                  m(".signup",
+                    m("a.btn[href='/signup']", { config: m.route }, "Signup")))
+               ]); 
     } else {
-      return nav(
-        m("li",
-          m("a", {href: "#",
-                  onclick: function (e) { NavBar.logout(e,ctrl) }
-                 },
-            "Logout")
-         )
-      );
+      if (m.route() === "/") { var e_active = ".active"; } else { var e_active = "" }
+      if (m.route() === "/history") { var h_active = ".active"; } else { var h_active = "" }
+      if (m.route() === "/docs") { var d_active = ".active"; } else { var d_active = "" }
+
+      return m("ul.nav.nav-sidebar",
+               [m("li" + e_active, m("a[href='/']", { config: m.route }, "Entries")),
+                m("li", m("a[href='#']", "Reports")),
+                m("li" + h_active, m("a[href='/history']", { config: m.route }, "History")),
+                m("li", m("a[href='#']", "Settings")),
+                m("li" + d_active, m("a[href='/docs']", { config: m.route }, "Export")),
+                m("li",
+                  m("a", {href: "#",
+                          onclick: function (e) { app.NavBar.logout(e,ctrl) }
+                         },
+                    "Logout") 
+                 )]);
     }
   }
 };
 
 
-
-var Entries = {
-  controller: function (args) {
-    this.entries = m.prop([]);
-
-    if (localStorage["housetab_token"]) {
-      var token = localStorage["housetab_token"];
+app.Entries = {
+  controller: function () {
+    if (app.session.token() !== "") {
       m.request({
         method: "GET",
-        url: "/api/entries?token=" + token}).then(this.entries, console.error);
+        url: "/api/entries?token=" + app.session.token()}).then(app.data.entries, console.error);
     }
   },
 
-  view: function (ctrl, args) {
+  view: function (ctrl) {
     var lookup_table = {};
-    args.persons().forEach(function (e) { lookup_table[e.personId] = e.personName; });
+    app.data.persons().forEach(function (e) { lookup_table[e.personId] = e.personName; });
     function person_name(id) {
       return lookup_table[id];
     }
-    if (localStorage["housetab_token"] && localStorage["housetab_account"]) {
-      var token = localStorage["housetab_token"];
-      var account = localStorage["housetab_account"];
-
-      var entryNodes = ctrl.entries().map(function (e) {
+    if (app.session.token() !== "") {
+      var entryNodes = app.data.entries().map(function (e) {
         return m("tr",
                  [m("td", person_name(e.entryWho)),
                   m("td", e.entryCategory),
@@ -156,25 +170,22 @@ var Entries = {
 };
 
 
-var Persons = {
-  controller: function (args) {
-    this.result = m.prop(null);
-
-    if (localStorage["housetab_token"]) {
-      var token = localStorage["housetab_token"];
+app.Persons = {
+  controller: function () {
+    if (app.session.token() !== "") {
       m.request({
         method: "GET",
-        url: "/api/persons?token=" + token}).then(args.persons, console.error);
+        url: "/api/persons?token=" + app.session.token()}).then(app.data.persons, console.error);
       m.request({
         method: "GET",
-        url: "/api/result?token=" + token}).then(this.result, console.error);
+        url: "/api/result?token=" + app.session.token()}).then(app.data.result, console.error);
     }
   },
 
-  view: function (ctrl, args) {
-    if (typeof ctrl.result() !== "null") {
+  view: function (ctrl) {
+    if (app.data.result() !== {}) {
       var get_result = function (p) {
-        var r = ctrl.result().people.filter(function (e) {
+        var r = app.data.result().people.filter(function (e) {
           return e[0].personId === p;
         });
         if (r.length !== 0) {
@@ -193,7 +204,7 @@ var Persons = {
         return "$" + m.toFixed(2);
       }
     }
-    var personsNodes = args.persons().map(function (p) {
+    var personsNodes = app.data.persons().map(function (p) {
 
       var r = get_result(p.personId);
       if (typeof r !== "null") {
@@ -232,46 +243,39 @@ var Persons = {
 // });
 
 function template(main) {
-  if (localStorage["housetab_token"]) {
-    if (m.route() === "/") { var e_active = ".active"; } else { var e_active = "" }
-    if (m.route() === "/history") { var h_active = ".active"; } else { var h_active = "" }
-    if (m.route() === "/docs") { var d_active = ".active"; } else { var d_active = "" }
 
-    var menu = [m("li" + e_active, m("a[href='/']", { config: m.route }, "Entries")),
-                m("li", m("a[href='#']", "Reports")),
-                m("li" + h_active, m("a[href='/history']", { config: m.route }, "History")),
-                m("li", m("a[href='#']", "Settings")),
-                m("li" + d_active, m("a[href='/docs']", { config: m.route }, "Export"))
-               ];
+  if (app.session.username() !== "") {
+    var about = "for the account of";
   } else {
-    var menu = [];
+    var about = "";
   }
-
+    
   return m("div",
            [m(".row",
               [m(".col-sm-2.col-md-1.sidebar",
-                 [m.component(NavBar),
-                  m("ul.nav.nav-sidebar",
-                    [menu])
+                 [m(".title", [m(".about", about),
+                                m("img[src=/img/glyph.png]"),
+                                app.session.username()]),
+                  m.component(app.NavBar)
                  ]),
                m(".col-sm-9.col-sm-offset-2.col-md-11.col-md-offset-1.main",
                  main)])
            ]);
 }
 
-var Home = {
+app.Home = {
   controller: function () {
-    this.persons = m.prop([]);
+    app.data.init();
   },
 
   view: function (ctrl) {
-    return template([m("#persons.row", m.component(Persons, { persons: ctrl.persons })),
-                     m("#main", m.component(Entries, { persons: ctrl.persons }))]);
+    return template([m("#persons.row", m.component(app.Persons)),
+                     m("#main", m.component(app.Entries))]);
   }
 
 };
 
-var Docs = {
+app.Docs = {
   controller: function () {
     this.docs = m.prop("");
     m.request({method: "GET", url: "/api/docs"}).then(this.docs, console.error);
@@ -285,28 +289,26 @@ var Docs = {
   }
 };
 
-var History = {
+app.History = {
   controller: function () {
-    this.log = m.prop([]);
-    this.persons = m.prop([]);
-
-    if (localStorage["housetab_token"]) {
-      var token = localStorage["housetab_token"];
+    if (app.session.token() !== "") {
       m.request({method: "GET",
-                 url: "/api/logs?token=" + token}).then(this.log, console.error);
+                 url: "/api/logs?token=" + app.session.token()}).
+        then(app.data.log, console.error);
       m.request({method: "GET",
-                 url: "/api/persons?token=" + token}).then(this.persons, console.error);
+                 url: "/api/persons?token=" + app.session.token()}).
+        then(app.data.persons, console.error);
     }
   },
 
   view: function (ctrl) {
     var lookup_table = {};
-    ctrl.persons().forEach(function (e) { lookup_table[e.personId] = e.personName; });
+    app.data.persons().forEach(function (e) { lookup_table[e.personId] = e.personName; });
     function person_name(id) {
       return lookup_table[id];
     }
 
-    var logNodes = ctrl.log().map(function (e) {
+    var logNodes = app.data.log().map(function (e) {
       if (e.logDateOld) {
         var old_date = (new Date(e.logDateOld)).toLocaleDateString();
       }
@@ -376,8 +378,8 @@ var History = {
 };
 
 m.route(document.body, "/", {
-  "/": Home,
-  "/signup" : Signup,
-  "/docs": Docs,
-  "/history": History
+  "/": app.Home,
+  "/signup" : app.Signup,
+  "/docs": app.Docs,
+  "/history": app.History
 });

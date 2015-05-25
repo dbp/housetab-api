@@ -13,12 +13,53 @@ app.session.init = function () {
 app.session.init();
 
 app.data = {};
-app.data.init = function () {
-  this.entries = m.prop([]);
-  this.persons = m.prop([]);
-  this.result = m.prop({})
-  this.log = m.prop([]); 
+app.data.init = {};
+
+// Data definitions
+app.data.init.entries = function () {
+  app.data.entries = m.prop([]);
+  m.request({
+    method: "GET",
+    url: "/api/entries?token=" + app.session.token()}).then(app.data.entries, console.error);
 };
+
+app.data.init.persons = function () {
+  app.data.persons = m.prop([]);
+  m.request({
+    method: "GET",
+    url: "/api/persons?token=" + app.session.token()}).then(app.data.persons, console.error);
+
+  m.request({
+    method: "GET",
+    url: "/api/entries?token=" + app.session.token()}).then(app.data.entries, console.error);
+};
+
+app.data.init.result = function () {
+  app.data.result = m.prop([]);
+  m.request({
+    method: "GET",
+    url: "/api/result?token=" + app.session.token()}).then(app.data.result, console.error);
+};
+
+app.data.init.log = function () {
+  app.data.log = m.prop([]);
+  m.request({method: "GET",
+             url: "/api/logs?token=" + app.session.token()}).
+    then(app.data.log, console.error);
+};
+
+// Data requirements for pages
+app.data.init.Home = function () {
+  app.data.init.entries();
+  app.data.init.persons();
+  app.data.init.result();
+};
+
+app.data.init.Log = function () {
+  app.data.init.persons();
+  app.data.init.log();
+};
+
 
 app.Signup = {
   controller: function () {
@@ -73,7 +114,7 @@ app.NavBar = {
   },
 
   view: function(ctrl) {
-    
+
     if (app.session.token() === "") {
       return m("ul.nav.nav-sidebar",
                [m("li",
@@ -95,7 +136,7 @@ app.NavBar = {
                 m("li",
                   m(".signup",
                     m("a.btn[href='/signup']", { config: m.route }, "Signup")))
-               ]); 
+               ]);
     } else {
       if (m.route() === "/") { var e_active = ".active"; } else { var e_active = "" }
       if (m.route() === "/history") { var h_active = ".active"; } else { var h_active = "" }
@@ -111,7 +152,7 @@ app.NavBar = {
                   m("a", {href: "#",
                           onclick: function (e) { app.NavBar.logout(e,ctrl) }
                          },
-                    "Logout") 
+                    "Logout")
                  )]);
     }
   }
@@ -119,13 +160,7 @@ app.NavBar = {
 
 
 app.Entries = {
-  controller: function () {
-    if (app.session.token() !== "") {
-      m.request({
-        method: "GET",
-        url: "/api/entries?token=" + app.session.token()}).then(app.data.entries, console.error);
-    }
-  },
+  controller: function () {},
 
   view: function (ctrl) {
     var lookup_table = {};
@@ -171,16 +206,7 @@ app.Entries = {
 
 
 app.Persons = {
-  controller: function () {
-    if (app.session.token() !== "") {
-      m.request({
-        method: "GET",
-        url: "/api/persons?token=" + app.session.token()}).then(app.data.persons, console.error);
-      m.request({
-        method: "GET",
-        url: "/api/result?token=" + app.session.token()}).then(app.data.result, console.error);
-    }
-  },
+  controller: function () {},
 
   view: function (ctrl) {
     if (app.data.result() !== {}) {
@@ -249,7 +275,7 @@ function template(main) {
   } else {
     var about = "";
   }
-    
+
   return m("div",
            [m(".row",
               [m(".col-sm-2.col-md-1.sidebar",
@@ -263,9 +289,25 @@ function template(main) {
            ]);
 }
 
+app.Login = {
+  controller: function () {
+    if (app.session.token() !== "") {
+      m.route("/");
+    }
+  },
+
+  view: function (ctrl) {
+    return template(m("div"));
+  }
+};
+
 app.Home = {
   controller: function () {
-    app.data.init();
+    if (app.session.token() === "") {
+      m.route("/login");
+    } else {
+      app.data.init.Home();
+    }
   },
 
   view: function (ctrl) {
@@ -291,13 +333,10 @@ app.Docs = {
 
 app.History = {
   controller: function () {
-    if (app.session.token() !== "") {
-      m.request({method: "GET",
-                 url: "/api/logs?token=" + app.session.token()}).
-        then(app.data.log, console.error);
-      m.request({method: "GET",
-                 url: "/api/persons?token=" + app.session.token()}).
-        then(app.data.persons, console.error);
+    if (app.session.token() === "") {
+      m.route("/login");
+    } else {
+      app.data.init.Log();
     }
   },
 
@@ -379,6 +418,7 @@ app.History = {
 
 m.route(document.body, "/", {
   "/": app.Home,
+  "/login": app.Login,
   "/signup" : app.Signup,
   "/docs": app.Docs,
   "/history": app.History

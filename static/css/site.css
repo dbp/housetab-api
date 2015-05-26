@@ -140,9 +140,13 @@ body {
 }
 
 .entries {
-  max-width: 100%;
+  border: 1px solid #ddd;
 }
 
-.entries td {
-  max-width: 100px;
+.entries .row:nth-child(odd) {
+  background-color: white;
+}
+
+.entries .row:nth-child(even) {
+  background-color: #f5f5f5;
 }

@@ -202,7 +202,7 @@ app.Entries = {
     if (app.session.token() !== "") {
       var entryNodes = app.Entries.filter(ctrl, app.data.entries()).
           map(function (e) {
-            return m(".row.well",
+            return m(".row",
                      [m(".col-md-1", person_name(e.entryWho)),
                       m(".col-md-2", e.entryCategory),
                       m(".col-md-4", e.entryWhat),
@@ -214,8 +214,8 @@ app.Entries = {
 
       return m("div",
                [m("h2.sub-header", "Entries"),
-                m(".entries",
-                  [m(".row.well",
+                m(".entries.container-fluid",
+                  [m(".row",
                      [m(".col-md-1", "Who"),
                       m(".col-md-2.form-inline",
                         [m("span", "Category"),

@@ -159,7 +159,38 @@ app.NavBar = {
 
 app.Entries = {
   controller: function () {
-    this.search = m.prop("");
+    this.what_search = m.prop("");
+    this.category_selection = m.prop("all");
+    this.categories = ["all",
+                       "groceries",
+                       "toiletries",
+                       "misc",
+                       "rent",
+                       "alcohol",
+                       "furnishings",
+                       "household",
+                       "entertainment",
+                       "cash",
+                       "food",
+                       "utilities"
+                      ];
+
+  },
+
+  filter: function (ctrl, entries) {
+    if (ctrl.what_search().length !== 0 || ctrl.category_selection() !== "all") {
+      var cat_selected = ctrl.category_selection() !== "all";
+      return entries.filter(function (item) {
+        if (cat_selected) {
+          return item.entryCategory === ctrl.category_selection() &&
+            item.entryWhat.toLowerCase().indexOf(ctrl.what_search().toLowerCase()) > -1;
+        } else {
+          return item.entryWhat.toLowerCase().indexOf(ctrl.what_search().toLowerCase()) > -1;
+        }
+      });
+    } else {
+      return entries;
+    }
   },
 
   view: function (ctrl) {
@@ -169,10 +200,7 @@ app.Entries = {
       return lookup_table[id];
     }
     if (app.session.token() !== "") {
-      var entryNodes = app.data.entries().
-          filter(function (item) {
-            return item.entryWhat.toLowerCase().indexOf(ctrl.search().toLowerCase()) > -1;
-          }).
+      var entryNodes = app.Entries.filter(ctrl, app.data.entries()).
           map(function (e) {
             return m("tr",
                      [m("td", person_name(e.entryWho)),
@@ -191,11 +219,18 @@ app.Entries = {
                      [m("thead",
                         [m("tr",
                            [m("th", "Who"),
-                            m("th", "Category"),
                             m("th.form-inline",
-                              [m("span", "What - Search: "),
-                               m("input.form-control.",
-                                 {oninput: m.withAttr("value", ctrl.search)}),]),
+                              [m("span", "Category"),
+                               m("select.form-control.pull-right",
+                                 { onchange: m.withAttr("value", ctrl.category_selection) },
+                                 ctrl.categories.map(function (e) {
+                                   return m("option", e);
+                                 }))]),
+                            m("th.form-inline",
+                              [m("span", "What"),
+                               m("input.form-control.pull-right",
+                                 {oninput: m.withAttr("value", ctrl.what_search),
+                                  placeholder: "Search..."}),]),
                             m("th", "How Much"),
                             m("th", "Date"),
                             m("th", "Who Pays")

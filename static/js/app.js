@@ -202,43 +202,38 @@ app.Entries = {
     if (app.session.token() !== "") {
       var entryNodes = app.Entries.filter(ctrl, app.data.entries()).
           map(function (e) {
-            return m("tr",
-                     [m("td", person_name(e.entryWho)),
-                      m("td", e.entryCategory),
-                      m("td", e.entryWhat),
-                      m("td", "$" + e.entryHowMuch),
-                      m("td", (new Date(e.entryDate)).toLocaleDateString()),
-                      m("td", e.entryWhoPays.map(person_name).join(", "))
+            return m(".row.well",
+                     [m(".col-md-1", person_name(e.entryWho)),
+                      m(".col-md-2", e.entryCategory),
+                      m(".col-md-4", e.entryWhat),
+                      m(".col-md-1", "$" + e.entryHowMuch),
+                      m(".col-md-1", (new Date(e.entryDate)).toLocaleDateString()),
+                      m(".col-md-1", e.entryWhoPays.map(person_name).join(", "))
                      ]);
           });
 
       return m("div",
                [m("h2.sub-header", "Entries"),
-                m(".table-responsive.well.well-lg",
-                  [m("table.table.table-striped",
-                     [m("thead",
-                        [m("tr",
-                           [m("th", "Who"),
-                            m("th.form-inline",
-                              [m("span", "Category"),
-                               m("select.form-control.pull-right",
-                                 { onchange: m.withAttr("value", ctrl.category_selection) },
-                                 ctrl.categories.map(function (e) {
-                                   return m("option", e);
-                                 }))]),
-                            m("th.form-inline",
-                              [m("span", "What"),
-                               m("input.form-control.pull-right",
-                                 {oninput: m.withAttr("value", ctrl.what_search),
-                                  placeholder: "Search..."}),]),
-                            m("th", "How Much"),
-                            m("th", "Date"),
-                            m("th", "Who Pays")
-                           ])
-                        ]),
-                      m("tbody", entryNodes)
-                     ])
-                  ])
+                m(".entries",
+                  [m(".row.well",
+                     [m(".col-md-1", "Who"),
+                      m(".col-md-2.form-inline",
+                        [m("span", "Category"),
+                         m("select.form-control.pull-right",
+                           { onchange: m.withAttr("value", ctrl.category_selection) },
+                           ctrl.categories.map(function (e) {
+                             return m("option", e);
+                           }))]),
+                      m(".col-md-4.form-inline",
+                        [m("span", "What"),
+                         m("input.form-control.pull-right",
+                           {oninput: m.withAttr("value", ctrl.what_search),
+                            placeholder: "Search..."}),]),
+                      m(".col-md-1", "How Much"),
+                      m(".col-md-1", "Date"),
+                      m(".col-md-2", "Who Pays")
+                     ]),
+                   m("div", entryNodes)])
                ]);
     } else {
       return m("div");
@@ -279,7 +274,7 @@ app.Persons = {
         var spent = "spent " + format_money(r[1]);
         var owes = format_money(r[2]);
       }
-      return m(".generated.col-xs-4.col-sm-2",
+      return m(".col-sm-2",
                m(".panel.panel-default",
                  [m(".panel-heading", m(".panel-title",
                                         [p.personName + " ",
@@ -325,7 +320,7 @@ function template(main) {
                             app.session.username()]),
                m.component(app.NavBar)
               ]),
-            m(".col-sm-9.col-sm-offset-2.col-md-11.col-md-offset-1.main",
+            m(".col-sm-10.col-md-11.main",
               main)]) ;
 }
 

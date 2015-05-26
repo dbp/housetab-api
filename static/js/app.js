@@ -20,18 +20,16 @@ app.data.init.entries = function () {
   app.data.entries = m.prop([]);
   m.request({
     method: "GET",
-    url: "/api/entries?token=" + app.session.token()}).then(app.data.entries, console.error);
+    url: "/api/entries?token=" + app.session.token()
+  }).then(app.data.entries, console.error);
 };
 
 app.data.init.persons = function () {
   app.data.persons = m.prop([]);
   m.request({
     method: "GET",
-    url: "/api/persons?token=" + app.session.token()}).then(app.data.persons, console.error);
-
-  m.request({
-    method: "GET",
-    url: "/api/entries?token=" + app.session.token()}).then(app.data.entries, console.error);
+    url: "/api/persons?token=" + app.session.token()
+  }).then(app.data.persons, console.error);
 };
 
 app.data.init.result = function () {
@@ -160,7 +158,9 @@ app.NavBar = {
 
 
 app.Entries = {
-  controller: function () {},
+  controller: function () {
+    this.search = m.prop("");
+  },
 
   view: function (ctrl) {
     var lookup_table = {};
@@ -169,16 +169,20 @@ app.Entries = {
       return lookup_table[id];
     }
     if (app.session.token() !== "") {
-      var entryNodes = app.data.entries().map(function (e) {
-        return m("tr",
-                 [m("td", person_name(e.entryWho)),
-                  m("td", e.entryCategory),
-                  m("td", e.entryWhat),
-                  m("td", "$" + e.entryHowMuch),
-                  m("td", (new Date(e.entryDate)).toLocaleDateString()),
-                  m("td", e.entryWhoPays.map(person_name).join(", "))
-                 ]);
-      });
+      var entryNodes = app.data.entries().
+          filter(function (item) {
+            return item.entryWhat.toLowerCase().indexOf(ctrl.search().toLowerCase()) > -1;
+          }).
+          map(function (e) {
+            return m("tr",
+                     [m("td", person_name(e.entryWho)),
+                      m("td", e.entryCategory),
+                      m("td", e.entryWhat),
+                      m("td", "$" + e.entryHowMuch),
+                      m("td", (new Date(e.entryDate)).toLocaleDateString()),
+                      m("td", e.entryWhoPays.map(person_name).join(", "))
+                     ]);
+          });
 
       return m("div",
                [m("h2.sub-header", "Entries"),
@@ -188,7 +192,10 @@ app.Entries = {
                         [m("tr",
                            [m("th", "Who"),
                             m("th", "Category"),
-                            m("th", "What"),
+                            m("th.form-inline",
+                              [m("span", "What - Search: "),
+                               m("input.form-control.",
+                                 {oninput: m.withAttr("value", ctrl.search)}),]),
                             m("th", "How Much"),
                             m("th", "Date"),
                             m("th", "Who Pays")
@@ -276,17 +283,15 @@ function template(main) {
     var about = "";
   }
 
-  return m("div",
-           [m(".row",
-              [m(".col-sm-2.col-md-1.sidebar",
-                 [m(".title", [m(".about", about),
-                                m("img[src=/img/glyph.png]"),
-                                app.session.username()]),
-                  m.component(app.NavBar)
-                 ]),
-               m(".col-sm-9.col-sm-offset-2.col-md-11.col-md-offset-1.main",
-                 main)])
-           ]);
+  return m(".row",
+           [m(".col-sm-2.col-md-1.sidebar",
+              [m(".title", [m(".about", about),
+                            m("img[src=/img/glyph.png]"),
+                            app.session.username()]),
+               m.component(app.NavBar)
+              ]),
+            m(".col-sm-9.col-sm-offset-2.col-md-11.col-md-offset-1.main",
+              main)]) ;
 }
 
 app.Login = {

@@ -12,7 +12,7 @@ import           GHC.Generics
 
 import           Account.Types          (genSalt)
 
-data Authentication = Authed Text
+data Authentication = Authed Int Text
                     | NotAuthed deriving Generic
 
 instance ToJSON Authentication

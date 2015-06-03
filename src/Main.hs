@@ -48,14 +48,17 @@ instance ToSample Lib.Result Lib.Result where
 
 result :: PG.Connection -> R.Connection -> Server ResultApi
 result pg r (Just token) =
-  do Just account_id <- liftIO $ Account.Session.get r token
-     entries <- liftIO $ runQuery pg (Entry.Types.getAccountEntries account_id)
-     now <- liftIO getCurrentTime
-     persons <- liftIO $ runQuery pg (Person.Types.getAccountPersons now account_id)
-     shares <- liftIO $ mapM (\p -> runQuery pg (Person.Types.getPersonShares
-                                                        (Person.Types.personId p)))
-                             persons
-     return $ Lib.run (zip persons shares) entries
+  do maccount_id <- liftIO $ Account.Session.get r token
+     case maccount_id of
+       Nothing -> return $ Lib.Result [] (2015, 1, 1)
+       Just account_id ->
+         do entries <- liftIO $ runQuery pg (Entry.Types.getAccountEntries account_id)
+            now <- liftIO getCurrentTime
+            persons <- liftIO $ runQuery pg (Person.Types.getAccountPersons now account_id)
+            shares <- liftIO $ mapM (\p -> runQuery pg (Person.Types.getPersonShares
+                                                                (Person.Types.personId p)))
+                                      persons
+            return $ Lib.run (zip persons shares) entries
 
 main :: IO ()
 main = do

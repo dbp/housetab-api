@@ -79,7 +79,7 @@ instance ToSample NewAccount NewAccount where
 
 instance ToSample Account.Session.Authentication Account.Session.Authentication where
   toSamples _ = [("Successfully authenticated, contains the session token."
-                 ,Account.Session.Authed "abcde")
+                 ,Account.Session.Authed 1 "abcde")
                 ,("Failed to authenticate.", Account.Session.NotAuthed)]
 
 server :: PG.Connection -> R.Connection -> Server Api
@@ -106,5 +106,5 @@ server pg r = postAccount pg
                        accountPassword account == hashPassword password (accountSalt account)
                  if authenticated
                     then do token <- liftIO (Account.Session.generate r (accountId account))
-                            return $ Account.Session.Authed token
+                            return $ Account.Session.Authed (accountId account) token
                     else return Account.Session.NotAuthed

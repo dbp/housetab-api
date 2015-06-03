@@ -7,6 +7,7 @@ var app = {};
 app.session = {};
 app.session.init = function () {
   this.username = m.prop(localStorage["housetab_account"] || "");
+  this.account_id = m.prop(localStorage["housetab_account_id"] || "");
   this.token = m.prop(localStorage["housetab_token"] || "");
 };
 
@@ -73,8 +74,10 @@ app.NavBar = {
     var token = app.session.token();
     delete localStorage["housetab_token"];
     delete localStorage["housetab_account"];
+    delete localStorage["housetab_account_id"];
     app.session.token("");
     app.session.username("");
+    app.session.account_id("");
     m.request({method: "GET", url: "/api/accounts/session/delete?token=" + token}).
       then(function() { ctrl.error(""); m.route("/"); },
            ctrl.error);
@@ -93,8 +96,9 @@ app.NavBar = {
                url: "/api/accounts/session/new?name=" +
                username + "&password=" + password}).then(function (data) {
                  if (data.tag === 'Authed') {
-                   localStorage["housetab_token"] = data.contents;
-                   app.session.token(data.contents);
+                   console.log(data);
+                   localStorage["housetab_token"] = data.contents[1];
+                   localStorage["housetab_account_id"] = data.contents[0];
                    localStorage["housetab_account"] = username;
                    ctrl.error("");
                    m.route("/");
@@ -174,13 +178,59 @@ app.Entries = {
                        "food",
                        "utilities"
                       ];
+    this.new_entry = { entryWhoPays: m.prop([]),
+                       entryDate: m.prop(""),
+                       entryWhat: m.prop(""),
+                       entryWho: m.prop(0),
+                       entryCategory: m.prop(""),
+                       entryHowMuch: m.prop(""),
+                     };
 
+    this.entry_validation = m.prop("");
+
+    this.submit_new_entry = function (ctrl) {
+      return function (e) {
+        e.preventDefault();
+        var data = { entryWhoPays: ctrl.new_entry.entryWhoPays(),
+                     entryDate: ctrl.new_entry.entryDate(),
+                     entryWhat: ctrl.new_entry.entryWhat(),
+                     entryWho: ctrl.new_entry.entryWho(),
+                     entryCategory: ctrl.new_entry.entryCategory(),
+                     entryHowMuch: ctrl.new_entry.entryHowMuch(),
+                     entryAccountId: Number(app.session.account_id()),
+                     entryId: []
+                   };
+        if (data.entryWho === 0) {
+          ctrl.entry_validation("Must select Who.");
+          return;
+        }
+        if (data.entryWhoPays.length === 0) {
+          ctrl.entry_validation("Must choose at least one person for Who Pays.");
+          return;
+        }
+        if (data.entryDate === "" || data.entryDate === NaN) {
+          ctrl.entry_validation("Must enter date, like 2015/6/1.");
+          return;
+        }
+        if (data.entryCategory === "") {
+          ctrl.entry_validation("Must select category.");
+          return;
+        }
+        m.request({ method: "POST",
+                    url: "/api/entries",
+                    data: data
+                  }, console.error).then(function (new_entry) {
+                    app.data.entries([new_entry].concat(app.data.entries()));
+                  });
+      };
+    };
   },
 
   filter: function (ctrl, entries) {
     if (ctrl.what_search().length !== 0 || ctrl.category_selection() !== "all") {
       var cat_selected = ctrl.category_selection() !== "all";
       return entries.filter(function (item) {
+        console.log(item);
         if (cat_selected) {
           return item.entryCategory === ctrl.category_selection() &&
             item.entryWhat.toLowerCase().indexOf(ctrl.what_search().toLowerCase()) > -1;
@@ -212,6 +262,7 @@ app.Entries = {
                      ]);
           });
 
+
       return m("div",
                [m("h2.sub-header", "Entries"),
                 m(".entries.container-fluid",
@@ -231,8 +282,67 @@ app.Entries = {
                             placeholder: "Search..."}),]),
                       m(".col-md-1", "How Much"),
                       m(".col-md-1", "Date"),
-                      m(".col-md-2", "Who Pays")
+                      m(".col-md-1", "Who Pays"),
+                      m(".col-md-2")
                      ]),
+                   m(".row",
+                     m("form", [
+                       m(".col-md-1", m("select.form-control",
+                                        {onchange:
+                                         m.withAttr("value", function (v) {
+                                           ctrl.new_entry.entryWho(Number(v));
+                                         })},
+                                        [{personId: 0,personName:""}].concat(app.data.persons()).map(function (p) {
+                                          return m("option[value=" + p.personId + "]",
+                                                   p.personName);
+                                        }))),
+                       m(".col-md-2", m("select.form-control",
+                                        {onchange: m.withAttr("value",
+                                                              ctrl.new_entry.entryCategory)},
+                                        [""].concat(ctrl.categories.slice(1)).map(function (e) {
+                                          return m("option", e);
+                                        }))),
+                       m(".col-md-4", m("input.form-control",
+                                        {onchange: m.withAttr("value",
+                                                              ctrl.new_entry.entryWhat)})),
+                       m(".col-md-1", m("input.form-control",
+                                        {onchange:
+                                         m.withAttr("value",
+                                                    function (v) {
+                                                      ctrl.new_entry.entryHowMuch(Number(v));
+                                                    })})),
+                       m(".col-md-1", m("input.form-control",
+                                        {onchange:
+                                         m.withAttr("value",
+                                                    function (v) {
+                                                      ctrl.new_entry.entryDate((new Date(v)).toISOString());
+                                                    })})),
+                       m(".col-md-1", app.data.persons().map(function (p) {
+                         return m("label",
+                                  [m("input[type=checkbox][value=" + p.personId + "].form-control",
+                                     {onchange:
+                                      m.withAttr("value",
+                                                 function (v) {
+                                                   var v = Number(v);
+                                                   var c = ctrl.new_entry.entryWhoPays();
+                                                   if (c.indexOf(v) === -1) {
+                                                     ctrl.new_entry.entryWhoPays(c.concat([v]));
+                                                   } else {
+                                                     ctrl.new_entry.entryWhoPays(c.filter(function (e) {
+                                                       return e !== v;
+                                                     }));
+                                                   }
+                                                 })}),
+                                   p.personName]);
+                       })),
+                       m(".col-md-2", [
+                         m("span.label.label-danger", ctrl.entry_validation()),
+                         m("button.btn",
+                                        {onclick: ctrl.submit_new_entry(ctrl)},
+                           "Add")
+                       ])
+                     ])
+                    ),
                    m("div", entryNodes)])
                ]);
     } else {

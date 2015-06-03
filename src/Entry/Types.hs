@@ -66,7 +66,7 @@ instance FromJSON NewEntry
 
 
 pgInt4Array :: [Int] -> Column (PGArray PGInt4)
-pgInt4Array l = literalColumn . HPQ.OtherLit $ "{" ++ (intercalate "," (map show l)) ++ "}"
+pgInt4Array l = literalColumn . HPQ.OtherLit $ "ARRAY[" ++ (intercalate "," (map show l)) ++ "]::integer[]"
 
 $(makeAdaptorAndInstance "pEntry" ''Entry')
 

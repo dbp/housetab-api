@@ -6,3 +6,8 @@ deps/
 convert/dist
 convert/.cabal-sandbox
 convert/cabal.sandbox.config
+.env
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

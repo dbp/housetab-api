@@ -1,0 +1,13 @@
+{
+  "AWSEBDockerrunVersion": 2,
+  "volumes": [],
+  "containerDefinitions": [
+    {
+      "name": "hello-world",
+      "image": "tutum/hello-world",
+      "essential": true,
+      "memory": 128,
+      "mountPoints": []
+    }
+  ]
+}

@@ -160,6 +160,38 @@ app.NavBar = {
   }
 };
 
+var pikaday = function (date) {
+  return function (el, isInitialized) {
+    if (isInitialized) {
+      return;
+    }
+
+    // Everything here is Pikaday-related...
+    var input = document.createElement('input');
+    input.className = "form-control";
+
+    function setValue() {
+      if (date()) {
+        input.value = date().getFullYear() + "/" + (date().getMonth() + 1) + "/" + date().getDate();
+      }
+    }
+
+    setValue();
+
+    el.appendChild(input);
+
+    new Pikaday({defaultDate: date(),
+                 field: input,
+                 onSelect: function () {
+	           // Except here, where we bind Pikaday's events back to the Mithril model
+	           date(this.getDate());
+                   setValue();
+                   m.redraw();
+                 }
+                });
+  }
+};
+
 
 app.Entries = {
   controller: function () {
@@ -253,11 +285,31 @@ app.Entries = {
       var entryNodes = app.Entries.filter(ctrl, app.data.entries()).
           map(function (e) {
             return m(".row",
-                     [m(".col-md-1", person_name(e.entryWho)),
-                      m(".col-md-2", e.entryCategory),
-                      m(".col-md-4", e.entryWhat),
-                      m(".col-md-1", "$" + e.entryHowMuch),
-                      m(".col-md-1", (new Date(e.entryDate)).toLocaleDateString()),
+                     [m(".col-md-1", m("select.form-control",
+                                       {onchange: function () {} },
+                                       [{personId: 0,personName:""}].concat(app.data.persons()).map(function (p) {
+                                         if (p.personId === e.entryWho) {
+                                           return m("option[selected][value=" + p.personId + "]",
+                                                    p.personName);
+                                         } else {
+                                           return m("option[value=" + p.personId + "]",
+                                                    p.personName);
+                                         }
+                                       }))),
+                      m(".col-md-2", m("select.form-control.pull-right",
+                                       { onchange: function () {} },
+                                       ctrl.categories.slice(1).map(function (c) {
+                                         if (c === e.entryCategory) {
+                                           return m("option[selected]", c);
+                                         } else {
+                                           return m("option", c);
+                                         }
+                                       }))),
+                      m(".col-md-4", m("input.form-control[value=" + e.entryWhat + "]")),
+                      m(".col-md-1", m(".input-group",
+                                       [m(".input-group-addon", "$"),
+                                        m("input.form-control[value=" + e.entryHowMuch + "]")])),
+                      m(".col-md-1", { config: pikaday(m.prop(new Date(e.entryDate))) }),
                       m(".col-md-1", e.entryWhoPays.map(person_name).join(", "))
                      ]);
           });
@@ -286,63 +338,56 @@ app.Entries = {
                       m(".col-md-2")
                      ]),
                    m(".row",
-                     m("form", [
-                       m(".col-md-1", m("select.form-control",
-                                        {onchange:
-                                         m.withAttr("value", function (v) {
-                                           ctrl.new_entry.entryWho(Number(v));
-                                         })},
-                                        [{personId: 0,personName:""}].concat(app.data.persons()).map(function (p) {
-                                          return m("option[value=" + p.personId + "]",
-                                                   p.personName);
-                                        }))),
-                       m(".col-md-2", m("select.form-control",
-                                        {onchange: m.withAttr("value",
-                                                              ctrl.new_entry.entryCategory)},
-                                        [""].concat(ctrl.categories.slice(1)).map(function (e) {
-                                          return m("option", e);
-                                        }))),
-                       m(".col-md-4", m("input.form-control",
-                                        {onchange: m.withAttr("value",
-                                                              ctrl.new_entry.entryWhat)})),
-                       m(".col-md-1", m("input.form-control",
-                                        {onchange:
-                                         m.withAttr("value",
-                                                    function (v) {
-                                                      ctrl.new_entry.entryHowMuch(Number(v));
-                                                    })})),
-                       m(".col-md-1", m("input.form-control",
-                                        {onchange:
-                                         m.withAttr("value",
-                                                    function (v) {
-                                                      ctrl.new_entry.entryDate((new Date(v)).toISOString());
-                                                    })})),
-                       m(".col-md-1", app.data.persons().map(function (p) {
-                         return m("label",
-                                  [m("input[type=checkbox][value=" + p.personId + "].form-control",
-                                     {onchange:
-                                      m.withAttr("value",
-                                                 function (v) {
-                                                   var v = Number(v);
-                                                   var c = ctrl.new_entry.entryWhoPays();
-                                                   if (c.indexOf(v) === -1) {
-                                                     ctrl.new_entry.entryWhoPays(c.concat([v]));
-                                                   } else {
-                                                     ctrl.new_entry.entryWhoPays(c.filter(function (e) {
-                                                       return e !== v;
-                                                     }));
-                                                   }
-                                                 })}),
-                                   p.personName]);
-                       })),
-                       m(".col-md-2", [
-                         m("span.label.label-danger", ctrl.entry_validation()),
-                         m("button.btn",
-                                        {onclick: ctrl.submit_new_entry(ctrl)},
-                           "Add")
-                       ])
-                     ])
-                    ),
+                     [m(".col-md-1", m("select.form-control",
+                                       {onchange:
+                                        m.withAttr("value", function (v) {
+                                          ctrl.new_entry.entryWho(Number(v));
+                                        })},
+                                       [{personId: 0,personName:""}].concat(app.data.persons()).map(function (p) {
+                                         return m("option[value=" + p.personId + "]",
+                                                  p.personName);
+                                       }))),
+                      m(".col-md-2", m("select.form-control",
+                                       {onchange: m.withAttr("value",
+                                                             ctrl.new_entry.entryCategory)},
+                                       [""].concat(ctrl.categories.slice(1)).map(function (e) {
+                                         return m("option", e);
+                                       }))),
+                      m(".col-md-4", m("input.form-control",
+                                       {onchange: m.withAttr("value",
+                                                             ctrl.new_entry.entryWhat)})),
+                      m(".col-md-1", m("input.form-control",
+                                       {onchange:
+                                        m.withAttr("value",
+                                                   function (v) {
+                                                     ctrl.new_entry.entryHowMuch(Number(v));
+                                                   })})),
+                      m(".col-md-1", { config : pikaday(ctrl.new_entry.entryDate) }),
+                      m(".col-md-1", app.data.persons().map(function (p) {
+                        return m("label",
+                                 [m("input[type=checkbox][value=" + p.personId + "].form-control",
+                                    {onchange:
+                                     m.withAttr("value",
+                                                function (v) {
+                                                  var v = Number(v);
+                                                  var c = ctrl.new_entry.entryWhoPays();
+                                                  if (c.indexOf(v) === -1) {
+                                                    ctrl.new_entry.entryWhoPays(c.concat([v]));
+                                                  } else {
+                                                    ctrl.new_entry.entryWhoPays(c.filter(function (e) {
+                                                      return e !== v;
+                                                    }));
+                                                  }
+                                                })}),
+                                  p.personName]);
+                      })),
+                      m(".col-md-2", [
+                        m("span.label.label-danger", ctrl.entry_validation()),
+                        m("button.btn",
+                          {onclick: ctrl.submit_new_entry(ctrl)},
+                          "Add")
+                      ])
+                     ]),
                    m("div", entryNodes)])
                ]);
     } else {

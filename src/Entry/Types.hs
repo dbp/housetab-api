@@ -71,17 +71,16 @@ pgInt4Array l = literalColumn . HPQ.OtherLit $ "ARRAY[" ++ (intercalate "," (map
 $(makeAdaptorAndInstance "pEntry" ''Entry')
 
 -- NOTE(dbp 2015-05-02): This function is boilerplate, hopefully removable at some point.
-conv :: NewEntry -> IO NewEntryColumn
-conv (Entry {..}) = do
-  return $ Entry { entryId = Nothing
-                 , entryAccountId = pgInt4 entryAccountId
-                 , entryWho       = pgInt4 entryWho
-                 , entryWhat      = pgStrictText entryWhat
-                 , entryCategory  = pgStrictText entryCategory
-                 , entryDate      = pgUTCTime entryDate
-                 , entryHowMuch   = pgDouble entryHowMuch
-                 , entryWhoPays   = pgInt4Array entryWhoPays
-                 }
+conv :: NewEntry -> NewEntryColumn
+conv (Entry {..}) = Entry { entryId = Nothing
+                          , entryAccountId = pgInt4 entryAccountId
+                          , entryWho       = pgInt4 entryWho
+                          , entryWhat      = pgStrictText entryWhat
+                          , entryCategory  = pgStrictText entryCategory
+                          , entryDate      = pgUTCTime entryDate
+                          , entryHowMuch   = pgDouble entryHowMuch
+                          , entryWhoPays   = pgInt4Array entryWhoPays
+                          }
 
 entryTable :: Table NewEntryColumn EntryColumn
 entryTable = Table "entries" (pEntry Entry { entryId = optional "id"

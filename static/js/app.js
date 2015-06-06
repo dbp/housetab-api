@@ -17,12 +17,65 @@ app.data = {};
 app.data.init = {};
 
 // Data definitions
+function mk_editable(entry) {
+  return { i: entry, n: { entryId: m.prop(entry.entryId),
+                          entryWhoPays: m.prop(entry.entryWhoPays),
+                          entryDate: m.prop(entry.entryDate),
+                          entryWhat: m.prop(entry.entryWhat),
+                          entryWho: m.prop(entry.entryWho),
+                          entryCategory: m.prop(entry.entryCategory),
+                          entryHowMuch: m.prop(entry.entryHowMuch),
+                        } };
+}
+
+function get_entry_data(entry) {
+  return { entryWhoPays: entry.entryWhoPays(),
+           entryDate: entry.entryDate(),
+           entryWhat: entry.entryWhat(),
+           entryWho: Number(entry.entryWho()),
+           entryCategory: entry.entryCategory(),
+           entryHowMuch: Number(entry.entryHowMuch()),
+           entryAccountId: Number(app.session.account_id()),
+           entryId: entry.entryId() || []
+         };
+}
+
+function save_entry(entry) {
+  var data = get_entry_data(entry.n);
+  data.entryId = [];
+
+  m.request({ method: "POST",
+              url: "/api/entries/" + entry.i.entryId + "?token=" + app.session.token(),
+              data: data
+            }, console.error).then(function (_) {
+              data.entryId = entry.i.entryId;
+              entry.i = data;
+              console.log("Saved entry " + entry.i.entryId);
+            });
+}
+
+function entry_save_button(entry) {
+  var current = get_entry_data(entry.n);
+  if (Object.keys(entry.i).every(function (key) {
+    return entry.i[key] === current[key];
+  })) {
+    return [];
+  } else {
+    return [
+      // m("span.label.label-danger", ctrl.entry_validation()),
+      m("button.btn",
+        {onclick: function () { save_entry(entry); }},
+        "Save")
+    ];
+  }
+}
+
 app.data.init.entries = function () {
   app.data.entries = m.prop([]);
   m.request({
     method: "GET",
     url: "/api/entries?token=" + app.session.token()
-  }).then(app.data.entries, console.error);
+  }).then(function (entries) { app.data.entries(entries.map(mk_editable)); }, console.error);
 };
 
 app.data.init.persons = function () {
@@ -170,9 +223,15 @@ var pikaday = function (date) {
     var input = document.createElement('input');
     input.className = "form-control";
 
+    if (Date.parse(date()) === NaN) {
+      var current = null;
+    } else {
+      var current = new Date(date());
+    }
+
     function setValue() {
-      if (date()) {
-        input.value = date().getFullYear() + "/" + (date().getMonth() + 1) + "/" + date().getDate();
+      if (current) {
+        input.value = current.getFullYear() + "/" + (current.getMonth() + 1) + "/" + current.getDate();
       }
     }
 
@@ -180,11 +239,12 @@ var pikaday = function (date) {
 
     el.appendChild(input);
 
-    new Pikaday({defaultDate: date(),
+    new Pikaday({defaultDate: current,
                  field: input,
                  onSelect: function () {
 	           // Except here, where we bind Pikaday's events back to the Mithril model
-	           date(this.getDate());
+	           date(this.getDate().toISOString());
+                   current = this.getDate();
                    setValue();
                    m.redraw();
                  }
@@ -252,7 +312,7 @@ app.Entries = {
                     url: "/api/entries",
                     data: data
                   }, console.error).then(function (new_entry) {
-                    app.data.entries([new_entry].concat(app.data.entries()));
+                    app.data.entries([mk_editable(new_entry)].concat(app.data.entries()));
                   });
       };
     };
@@ -262,12 +322,11 @@ app.Entries = {
     if (ctrl.what_search().length !== 0 || ctrl.category_selection() !== "all") {
       var cat_selected = ctrl.category_selection() !== "all";
       return entries.filter(function (item) {
-        console.log(item);
         if (cat_selected) {
-          return item.entryCategory === ctrl.category_selection() &&
-            item.entryWhat.toLowerCase().indexOf(ctrl.what_search().toLowerCase()) > -1;
+          return item.i.entryCategory === ctrl.category_selection() &&
+            item.i.entryWhat.toLowerCase().indexOf(ctrl.what_search().toLowerCase()) > -1;
         } else {
-          return item.entryWhat.toLowerCase().indexOf(ctrl.what_search().toLowerCase()) > -1;
+          return item.i.entryWhat.toLowerCase().indexOf(ctrl.what_search().toLowerCase()) > -1;
         }
       });
     } else {
@@ -283,7 +342,8 @@ app.Entries = {
     }
     if (app.session.token() !== "") {
       var entryNodes = app.Entries.filter(ctrl, app.data.entries()).
-          map(function (e) {
+          map(function (item) {
+            var e = item.i;
             return m(".row",
                      [m(".col-md-1", m("select.form-control",
                                        {onchange: function () {} },
@@ -305,12 +365,32 @@ app.Entries = {
                                            return m("option", c);
                                          }
                                        }))),
-                      m(".col-md-4", m("input.form-control[value=" + e.entryWhat + "]")),
+                      m(".col-md-4", m("input.form-control",
+                                       { onchange: m.withAttr("value", item.n.entryWhat),
+                                         value: item.n.entryWhat()
+                                       })),
                       m(".col-md-1", m(".input-group",
                                        [m(".input-group-addon", "$"),
-                                        m("input.form-control[value=" + e.entryHowMuch + "]")])),
-                      m(".col-md-1", { config: pikaday(m.prop(new Date(e.entryDate))) }),
-                      m(".col-md-1", e.entryWhoPays.map(person_name).join(", "))
+                                        m("input.form-control",
+                                          { onchange: m.withAttr("value", item.n.entryHowMuch),
+                                            value: item.n.entryHowMuch()
+                                          })])),
+                      m(".col-md-1", { config: pikaday(item.n.entryDate) }),
+                      m(".col-md-1",
+                        app.data.persons().map(function (p) {
+                          if (e.entryWhoPays.indexOf(p.personId) !== -1) {
+                            return m("label",
+                                     [m("input[type=checkbox][checked][value=" + p.personId + "].form-control",
+                                        {onchange: function () {}}),
+                                      p.personName])
+                          } else {
+                            return m("label",
+                                     [m("input[type=checkbox][value=" + p.personId + "].form-control",
+                                        {onchange: function () {}}),
+                                      p.personName]);
+                          }
+                        })),
+                      m(".col-md-2", entry_save_button(item))
                      ]);
           });
 

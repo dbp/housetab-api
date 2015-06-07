@@ -270,8 +270,13 @@ app.Entries = {
                        "food",
                        "utilities"
                       ];
+
+    this.page = 0;
+
+    this.page_size = 50;
+
     this.new_entry = { entryWhoPays: m.prop([]),
-                       entryDate: m.prop(""),
+                       entryDate: m.prop(new Date().toISOString()),
                        entryWhat: m.prop(""),
                        entryWho: m.prop(0),
                        entryCategory: m.prop(""),
@@ -341,7 +346,30 @@ app.Entries = {
       return lookup_table[id];
     }
     if (app.session.token() !== "") {
-      var entryNodes = app.Entries.filter(ctrl, app.data.entries()).
+      var entries = app.Entries.filter(ctrl, app.data.entries());
+
+      if (entries.length > ctrl.page_size) {
+        var lis = [];
+        function mk_page_set(i) {
+          return function () {
+            ctrl.page = i;
+            return false;
+          };
+        }
+        for (var i = 0; i < entries.length / ctrl.page_size; i++) {
+          if (ctrl.page === i) {
+            lis.push(m("li.active", m("a[href=#]", { onclick: mk_page_set(i) }, i + 1)));
+          } else {
+            lis.push(m("li", m("a[href=#]", { onclick: mk_page_set(i) }, i + 1)));
+          }
+        }
+        var pagination = m("ul.pagination", lis);
+      } else {
+        var pagination = m("div");
+      }
+
+      var entryNodes = entries.
+          slice(ctrl.page*ctrl.page_size, ctrl.page*ctrl.page_size + ctrl.page_size).
           map(function (item) {
             var e = item.i;
             return m(".row",
@@ -349,7 +377,7 @@ app.Entries = {
                                        {onchange: function () {} },
                                        [{personId: 0,personName:""}].concat(app.data.persons()).map(function (p) {
                                          if (p.personId === e.entryWho) {
-                                           return m("option[selected][value=" + p.personId + "]",
+                                           return m("option[selected=selected][value=" + p.personId + "]",
                                                     p.personName);
                                          } else {
                                            return m("option[value=" + p.personId + "]",
@@ -366,13 +394,13 @@ app.Entries = {
                                          }
                                        }))),
                       m(".col-md-4", m("input.form-control",
-                                       { onchange: m.withAttr("value", item.n.entryWhat),
+                                       { oninput: m.withAttr("value", item.n.entryWhat),
                                          value: item.n.entryWhat()
                                        })),
                       m(".col-md-1", m(".input-group",
                                        [m(".input-group-addon", "$"),
                                         m("input.form-control",
-                                          { onchange: m.withAttr("value", item.n.entryHowMuch),
+                                          { oninput: m.withAttr("value", item.n.entryHowMuch),
                                             value: item.n.entryHowMuch()
                                           })])),
                       m(".col-md-1", { config: pikaday(item.n.entryDate) }),
@@ -468,7 +496,9 @@ app.Entries = {
                           "Add")
                       ])
                      ]),
-                   m("div", entryNodes)])
+                   m("div", entryNodes),
+                   m(".row", m(".col-md-12", pagination))
+                  ])
                ]);
     } else {
       return m("div");

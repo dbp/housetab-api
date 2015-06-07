@@ -314,7 +314,7 @@ app.Entries = {
           return;
         }
         m.request({ method: "POST",
-                    url: "/api/entries",
+                    url: "/api/entries?token=" + app.session.token(),
                     data: data
                   }, console.error).then(function (new_entry) {
                     app.data.entries([mk_editable(new_entry)].concat(app.data.entries()));

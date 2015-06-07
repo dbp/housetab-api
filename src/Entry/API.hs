@@ -27,7 +27,7 @@ import           Servant
 import Servant.Docs
 
 
-type Api = "entries" :> ReqBody '[JSON] NewEntry :> Post '[JSON] Entry
+type Api = "entries" :> QueryParam "token" Text :> ReqBody '[JSON] NewEntry :> Post '[JSON] Entry
       :<|> "entries" :> QueryParam "token" Text :> Capture "id" Int :>  ReqBody '[JSON] NewEntry :> Post '[JSON] Entry
       :<|> "entries" :> QueryParam "token" Text :> Get '[JSON] [Entry]
 
@@ -60,6 +60,9 @@ server pg r = postEntry pg r
                  do liftIO $ runUpdate pg entryTable (const . conv $ entry)
                                                      ((.== pgInt4 i) . entryId)
                     return (entry { entryId = i })
-        postEntry pg r entry =
-          do [entry''] <- liftIO $ runInsertReturning pg entryTable (conv entry) id
-             return entry''
+        postEntry pg r (Just token) entry =
+          do maid <- liftIO $ Account.Session.get r token
+             case maid of
+               Nothing -> left err401
+               Just account_id -> do [entry''] <- liftIO $ runInsertReturning pg entryTable (conv entry) id
+                                     return entry''

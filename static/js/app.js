@@ -9,6 +9,22 @@ app.session.init = function () {
   this.username = m.prop(localStorage["housetab_account"] || "");
   this.account_id = m.prop(localStorage["housetab_account_id"] || "");
   this.token = m.prop(localStorage["housetab_token"] || "");
+  if (this.token() !== "") {
+    m.request({ method: "GET",
+                url: "/api/accounts/session/check?token=" + this.token()
+              }, console.error).then(function (r) {
+                if (r === false) {
+                  app.session.username("");
+                  app.session.account_id("");
+                  app.session.token("");
+                  delete localStorage["housetab_token"];
+                  delete localStorage["housetab_account"];
+                  delete localStorage["housetab_account_id"];
+                  m.route("/login");
+                }
+              });
+  }
+
 };
 
 app.session.init();

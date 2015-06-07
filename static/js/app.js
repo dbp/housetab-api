@@ -149,9 +149,10 @@ app.NavBar = {
                url: "/api/accounts/session/new?name=" +
                username + "&password=" + password}).then(function (data) {
                  if (data.tag === 'Authed') {
-                   console.log(data);
                    localStorage["housetab_token"] = data.contents[1];
+                   app.session.token(localStorage["housetab_token"]);
                    localStorage["housetab_account_id"] = data.contents[0];
+                   app.session.account_id(localStorage["housetab_account_id"]);
                    localStorage["housetab_account"] = username;
                    ctrl.error("");
                    m.route("/");

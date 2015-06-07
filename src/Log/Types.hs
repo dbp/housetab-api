@@ -111,27 +111,27 @@ instance FromJSON NewLog
 $(makeAdaptorAndInstance "pLog" ''Log')
 
 -- NOTE(dbp 2015-05-02): This function is boilerplate, hopefully removable at some point.
-conv :: NewLog -> IO NewLogColumn
-conv (Log {..}) = do
-  return $ Log { logId = Nothing
-               , logAccountId = pgInt4 logAccountId
-               , logType      = pgStrictText logType
-               , logWhoOld       = maybeToNullable $ pgInt4 <$> logWhoOld
-               , logWhoNew       = maybeToNullable $ pgInt4 <$> logWhoNew
-               , logWhatOld      = maybeToNullable $ pgStrictText <$> logWhatOld
-               , logWhatNew      = maybeToNullable $ pgStrictText <$> logWhatNew
-               , logCategoryOld  = maybeToNullable $ pgStrictText <$> logCategoryOld
-               , logCategoryNew  = maybeToNullable $ pgStrictText <$> logCategoryNew
-               , logDateOld      = maybeToNullable $ pgUTCTime <$> logDateOld
-               , logDateNew      = maybeToNullable $ pgUTCTime <$> logDateNew
-               , logHowMuchOld   = maybeToNullable $ pgDouble <$> logHowMuchOld
-               , logHowMuchNew   = maybeToNullable $ pgDouble <$> logHowMuchNew
-               , logWhoPaysOld   = maybeToNullable $ pgInt4Array <$> logWhoPaysOld
-               , logWhoPaysNew   = maybeToNullable $ pgInt4Array <$> logWhoPaysNew
-               }
+conv :: NewLog -> NewLogColumn
+conv (Log {..}) =
+  Log { logId = Nothing
+      , logAccountId = pgInt4 logAccountId
+      , logType      = pgStrictText logType
+      , logWhoOld       = maybeToNullable $ pgInt4 <$> logWhoOld
+      , logWhoNew       = maybeToNullable $ pgInt4 <$> logWhoNew
+      , logWhatOld      = maybeToNullable $ pgStrictText <$> logWhatOld
+      , logWhatNew      = maybeToNullable $ pgStrictText <$> logWhatNew
+      , logCategoryOld  = maybeToNullable $ pgStrictText <$> logCategoryOld
+      , logCategoryNew  = maybeToNullable $ pgStrictText <$> logCategoryNew
+      , logDateOld      = maybeToNullable $ pgUTCTime <$> logDateOld
+      , logDateNew      = maybeToNullable $ pgUTCTime <$> logDateNew
+      , logHowMuchOld   = maybeToNullable $ pgDouble <$> logHowMuchOld
+      , logHowMuchNew   = maybeToNullable $ pgDouble <$> logHowMuchNew
+      , logWhoPaysOld   = maybeToNullable $ pgInt4Array <$> logWhoPaysOld
+      , logWhoPaysNew   = maybeToNullable $ pgInt4Array <$> logWhoPaysNew
+      }
 
 pgInt4Array :: [Int] -> Column (PGArray PGInt4)
-pgInt4Array l = literalColumn . HPQ.OtherLit $ "{" ++ (intercalate "," (map show l)) ++ "}"
+pgInt4Array l = literalColumn . HPQ.OtherLit $ "ARRAY[" ++ (intercalate "," (map show l)) ++ "]::integer[]"
 
 logTable :: Table NewLogColumn LogColumn
 logTable = Table "log" (pLog Log { logId = optional "id"

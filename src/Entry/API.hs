@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Entry.API where
 
 import Data.Time.Calendar
@@ -16,7 +17,7 @@ import           GHC.Generics
 import           GHC.Int                         (Int64)
 import           Opaleye                         (pgStrictByteString,
                                                   pgStrictText, pgBool, pgInt4, (.==),
-                                                  runInsertReturning, runQuery, runUpdate)
+                                                  runInsert, runInsertReturning, runQuery, runUpdate)
 
 import qualified Database.PostgreSQL.Simple      as PG
 import qualified Database.Redis                  as R
@@ -25,6 +26,7 @@ import qualified Account.Session
 import           Entry.Types
 import           Servant
 import Servant.Docs
+import qualified Log.Types
 
 
 type Api = "entries" :> QueryParam "token" Text :> ReqBody '[JSON] NewEntry :> Post '[JSON] Entry
@@ -57,12 +59,49 @@ server pg r = postEntry pg r
              case maid of
                Nothing -> left err404
                Just account_id ->
-                 do liftIO $ runUpdate pg entryTable (const . conv $ entry)
+                 do [old :: Entry] <- liftIO $ runQuery pg (getEntry i)
+                    liftIO $ runUpdate pg entryTable (const . conv $ entry)
                                                      ((.== pgInt4 i) . entryId)
+                    liftIO $ runInsert
+                               pg Log.Types.logTable
+                               (Log.Types.conv (Log.Types.Log () account_id "edit"
+                                               (Just (entryWho old))
+                                               (mn (entryWho old) (entryWho entry))
+                                               (Just (entryWhat old))
+                                               (mn (entryWhat old) (entryWhat entry))
+                                               (Just (entryCategory old))
+                                               (mn (entryCategory old) (entryCategory entry))
+                                               (Just (entryDate old))
+                                               (mn (entryDate old) (entryDate entry))
+                                               (Just (entryHowMuch old))
+                                               (mn (entryHowMuch old) (entryHowMuch entry))
+                                               (Just (entryWhoPays old))
+                                               (mn (entryWhoPays old) (entryWhoPays entry))
+                                               ))
                     return (entry { entryId = i })
+                 where mn x y = if x == y
+                                   then Nothing
+                                   else Just y
         postEntry pg r (Just token) entry =
           do maid <- liftIO $ Account.Session.get r token
              case maid of
                Nothing -> left err401
-               Just account_id -> do [entry''] <- liftIO $ runInsertReturning pg entryTable (conv entry) id
-                                     return entry''
+               Just account_id ->
+                 do [entry''] <- liftIO $ runInsertReturning pg entryTable (conv entry) id
+                    liftIO $ runInsert
+                               pg Log.Types.logTable
+                               (Log.Types.conv (Log.Types.Log () account_id "add"
+                                               Nothing
+                                               (Just (entryWho entry))
+                                               Nothing
+                                               (Just (entryWhat entry))
+                                               Nothing
+                                               (Just (entryCategory entry))
+                                               Nothing
+                                               (Just (entryDate entry))
+                                               Nothing
+                                               (Just (entryHowMuch entry))
+                                               Nothing
+                                               (Just (entryWhoPays entry))
+                                               ))
+                    return entry''

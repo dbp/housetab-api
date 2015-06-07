@@ -96,6 +96,12 @@ entryTable = Table "entries" (pEntry Entry { entryId = optional "id"
 entryQuery :: Query EntryColumn
 entryQuery = orderBy (desc entryDate) $ queryTable entryTable
 
+getEntry :: Int -> Query EntryColumn
+getEntry i = proc () ->
+  do entry <- entryQuery -< ()
+     restrict -< entryId entry .== pgInt4 i
+     returnA -< entry
+
 getAccountEntries :: Int -> Query EntryColumn
 getAccountEntries account_id = proc () ->
    do entry <- entryQuery -< ()

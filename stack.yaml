@@ -1,0 +1,7 @@
+flags: {}
+packages:
+- '.'
+- convert/
+extra-deps:
+- rivet-migration-0.1.0.1
+resolver: lts-3.1

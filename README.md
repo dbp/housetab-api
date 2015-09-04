@@ -12,8 +12,20 @@ template1# grant all on database housetab_devel to housetab_user;
 Load schema:
 
 ```
-psql -U housetab_user housetab_devel < schema.sql
-[enter 111 for password]
+psql -U housetab_user -h localhost -W housetab_devel < schema.sql
+Password for user housetab_user: [enter 111]
 ```
 
-Then build + run (stack.yaml to be added!).
+Build:
+
+```
+stack build
+```
+
+Run:
+
+```
+stack exec housetab
+```
+
+Then visit it on port 8000. Maybe we should make a way to sign up!

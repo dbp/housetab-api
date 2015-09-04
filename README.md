@@ -1,5 +1,13 @@
 ## Setup
 
+Install postgres and redis:
+
+For Mac:
+```
+brew install postgresql redis
+```
+
+
 Create database:
 
 ```
@@ -28,4 +36,18 @@ Run:
 stack exec housetab
 ```
 
-Then visit it on port 8000. Maybe we should make a way to sign up!
+Then visit it on port 8000.
+
+Maybe we should fix the signup! There is an api for it: POSTing JSON like:
+
+```
+{"accountName":"my-account","accountRecordHistory":false,"accountPassword":"my-pass","accountTutorialActive":false,"accountId":[],"accountEmail":"my@email.com","accountSalt":[]}
+```
+
+to `/api/accounts`
+
+as follows:
+
+```
+curl -X POST -d '{"accountName":"my-account","accountRecordHistory":false,"accountPassword":"my-pass","accountTutorialActive":false,"accountId":[],"accountEmail":"my@email.com","accountSalt":[]}' -H "Accept: application/json" -H "Content-Type: application/json" http://localhost:8000/api/accounts
+```

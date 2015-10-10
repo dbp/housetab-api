@@ -130,10 +130,61 @@ app.data.init.Log = function () {
 
 
 app.Signup = {
+  signup: function(e, ctrl) {
+    e.preventDefault();
+    m.request({method: "POST",
+               url: "/api/accounts",
+               data: { accountName: ctrl.username(),
+                       accountRecordHistory: false,
+                       accountPassword: ctrl.password(),
+                       accountTutorialActive: false,
+                       accountId: [],
+                       accountEmail: ctrl.email(),
+                       accountSalt: []
+                     }
+              }).then(function (data) {
+                console.log(data);
+                if (data.tag === 'Authed') {
+
+                   localStorage["housetab_token"] = data.contents[1];
+                   app.session.token(localStorage["housetab_token"]);
+                   localStorage["housetab_account_id"] = data.contents[0];
+                   app.session.account_id(localStorage["housetab_account_id"]);
+                   localStorage["housetab_account"] = ctrl.username();
+                   ctrl.error("");
+                   m.route("/");
+                 } else {
+                   ctrl.error("Signup failed");
+                 }
+               }, ctrl.error);
+  },
   controller: function () {
+    this.username = m.prop("");
+    this.email = m.prop(""),
+    this.password = m.prop("");
+    this.error = m.prop("");
   },
   view: function (ctrl) {
-    return m("div");
+    return m(".container-fluid",
+             m(".row",
+               m("form",
+                 [m("span.label.label-danger", ctrl.error()),
+                  m("input.form-control",  {placeholder: "Username...",
+                                            oninput: m.withAttr("value", ctrl.username),
+                                            value: ctrl.username()}),
+                  m("input.form-control",  {placeholder: "Email...",
+                                            oninput: m.withAttr("value", ctrl.email),
+                                            value: ctrl.email()}),
+                  m("input.form-control", {type: "password",
+                                           placeholder: "Password...",
+                                           oninput: m.withAttr("value", ctrl.password),
+                                           value: ctrl.password()}),
+                  m("input.form-control", {type: "submit",
+                                           value: "Signup",
+                                           onclick: function(e) { app.Signup.signup(e,ctrl) }})
+                 ]
+                )
+              ));
   }
 };
 
@@ -595,15 +646,16 @@ function template(main) {
     var about = "";
   }
 
-  return m(".row",
-           [m(".col-sm-2.col-md-1.sidebar",
-              [m(".title", [m(".about", about),
-                            m("img[src=/img/glyph.png]"),
-                            app.session.username()]),
-               m.component(app.NavBar)
-              ]),
-            m(".col-sm-10.col-md-11.main",
-              main)]) ;
+  return m(".container-fluid",
+           m(".row",
+             [m(".col-sm-2.col-md-1.sidebar",
+                [m(".title", [m(".about", about),
+                              m("img[src=/img/glyph.png]"),
+                              app.session.username()]),
+                 m.component(app.NavBar)
+                ]),
+              m(".col-sm-10.col-md-11.main",
+                main)])) ;
 }
 
 app.Login = {

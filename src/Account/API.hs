@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Account.API where
 
 import Control.Applicative
@@ -30,7 +31,7 @@ import Servant.Docs
 newtype Success = Success Bool deriving Generic
 instance ToJSON Success
 
-type Api = "accounts" :> ReqBody '[JSON] NewAccount :> Post '[JSON] Account
+type Api = "accounts" :> ReqBody '[JSON] NewAccount :> Post '[JSON] Account.Session.Authentication
       :<|> "accounts" :> "session" :> "new"
                       :> QueryParam "name" Text
                       :> QueryParam "password" Text
@@ -95,8 +96,9 @@ server pg r = postAccount pg
         one pg name = liftM listToMaybe $ runQuery pg (getAccountQuery name)
         postAccount pg account =
           do account' <- liftIO $ conv account
-             [account''] <- liftIO $ runInsertReturning pg accountTable account' id
-             return account''
+             [account'' :: Account] <- liftIO $ runInsertReturning pg accountTable account' id
+             token <- liftIO (Account.Session.generate r (accountId account''))
+             return $ Account.Session.Authed (accountId account'') token
         authenticate pg r (Just name) (Just password) =
           do maccount <- liftIO $ one pg name
              case maccount of

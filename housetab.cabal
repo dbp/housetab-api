@@ -2,7 +2,7 @@ Name: housetab
 Version: 0.1
 Synopsis: Project Synopsis Here
 Description: Project Description Here
-License: AllRightsReserved
+License: ISC
 Author: Author
 Maintainer: maintainer@example.com
 Stability: Experimental
@@ -31,7 +31,8 @@ Executable housetab
                -- applcation specific, perhaps unstable, libraries.
                , postgresql-simple           >= 0.4
 
-               , rivet-migration             >= 0.1
+               , rivet-core             >= 0.1
+               , rivet-adaptor-postgresql             >= 0.1
 
                , opaleye                     >= 0.3.1.2
                 -- opaleye deps

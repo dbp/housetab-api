@@ -92,7 +92,7 @@ M[:users].find().each do |account|
     # juggling in haskell to get this out, so at this stage, we'll shell out to the getpass
     # project to get the bytes of the password.
     puts "Shelling out to get password for #{account['accountName']}..."
-    pass = `cabal run -v0 "#{account['accountName']}"`
+    pass = `stack exec convert "#{account['accountName']}"`
     pass = pass.gsub!(/[\[\]]/,'').split(/\s*,\s*/).map(&:to_i).pack("C*")
 
     P.exec_params('INSERT INTO accounts (name, email, password, salt, tutorial_active, record_history) values ($1,$2,$3::bytea,$4,$5,$6)',

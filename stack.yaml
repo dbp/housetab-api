@@ -2,6 +2,12 @@ flags: {}
 packages:
 - '.'
 - convert/
-extra-deps:
-- rivet-migration-0.1.0.1
+- location:
+    git: https://github.com/dbp/rivet
+    commit: 8754cb25616d690ef3f1c643d6c7c582af870a28
+  subdirs:
+    - rivet-core
+    - rivet-autoimporter
+    - rivet-adaptor-postgresql
+  extra-dep: true
 resolver: lts-3.1

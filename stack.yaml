@@ -10,4 +10,4 @@ packages:
     - rivet-autoimporter
     - rivet-adaptor-postgresql
   extra-dep: true
-resolver: lts-3.1
+resolver: lts-6.6
